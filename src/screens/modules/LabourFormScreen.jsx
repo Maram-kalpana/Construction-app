@@ -305,7 +305,7 @@ export function LabourFormScreen({ route, navigation }) {
           />
 
           <GradientButton
-            title={editingEntry ? 'Update today's row' : "Add to today's list"}
+            title={editingEntry ? "Update today's row" : "Add to today's list"}
             onPress={async () => {
               if (!phone.trim() || name.trim().length < 2) {
                 Alert.alert('Missing info', 'Enter phone and name.');
