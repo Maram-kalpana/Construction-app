@@ -17,10 +17,15 @@ export function AppTextField({
   editable = true,
   placeholder,
   onBlur,
+  labelColor,
+  textColor,
+  placeholderColor,
+  borderColor,
+  backgroundColor,
 }) {
   return (
     <View style={[styles.wrap, style]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, labelColor ? { color: labelColor } : null]}>{label}</Text> : null}
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -31,9 +36,17 @@ export function AppTextField({
         autoCapitalize={autoCapitalize}
         editable={editable}
         placeholder={placeholder}
-        placeholderTextColor="rgba(35,63,95,0.38)"
+        placeholderTextColor={placeholderColor || 'rgba(35,63,95,0.38)'}
         onBlur={onBlur}
-        style={[styles.input, multiline && styles.multiline, !editable && styles.disabled, inputStyle]}
+        style={[
+          styles.input,
+          borderColor ? { borderColor } : null,
+          backgroundColor ? { backgroundColor } : null,
+          textColor ? { color: textColor } : null,
+          multiline && styles.multiline,
+          !editable && styles.disabled,
+          inputStyle,
+        ]}
       />
     </View>
   );

@@ -33,7 +33,7 @@ export function LoginScreen() {
         imageStyle={styles.bgImage}
       >
         <LinearGradient
-          colors={['rgba(233,245,255,0.12)', 'rgba(233,245,255,0.78)', 'rgba(233,245,255,0.94)']}
+          colors={['rgba(236,241,255,0.84)', 'rgba(220,230,250,0.88)', 'rgba(19,26,82,0.92)']}
           style={StyleSheet.absoluteFill}
         />
         <KeyboardAvoidingView
@@ -71,6 +71,11 @@ export function LoginScreen() {
                 }}
                 autoCapitalize="none"
                 placeholder="Enter username"
+                labelColor="rgba(255,255,255,0.9)"
+                textColor="#ffffff"
+                placeholderColor="rgba(255,255,255,0.55)"
+                borderColor="rgba(125,211,252,0.85)"
+                backgroundColor="rgba(5,14,48,0.38)"
               />
               <AppTextField
                 label="Password"
@@ -81,6 +86,11 @@ export function LoginScreen() {
                 }}
                 secureTextEntry
                 placeholder="Enter password"
+                labelColor="rgba(255,255,255,0.9)"
+                textColor="#ffffff"
+                placeholderColor="rgba(255,255,255,0.55)"
+                borderColor="rgba(125,211,252,0.35)"
+                backgroundColor="rgba(5,14,48,0.22)"
               />
               <GradientButton
                 title="Continue"
@@ -107,22 +117,22 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#e9f5ff' },
   bg: { flex: 1 },
-  bgImage: { transform: [{ scale: 1.04 }], opacity: 0.42 },
+  bgImage: { transform: [{ scale: 1.04 }], opacity: 0.18 },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, justifyContent: 'center' },
   brandBlock: { marginBottom: 18 },
-  kicker: { color: 'rgba(24,49,79,0.72)', fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
-  title: { marginTop: 8, fontSize: 34, fontWeight: '900', color: '#17324f', letterSpacing: 0.2 },
-  subtitle: { marginTop: 10, fontSize: 15, lineHeight: 22, color: 'rgba(24,49,79,0.82)', maxWidth: 340 },
+  kicker: { color: 'rgba(255,255,255,0.78)', fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
+  title: { marginTop: 8, fontSize: 34, fontWeight: '900', color: '#ffffff', letterSpacing: 0.2 },
+  subtitle: { marginTop: 10, fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.85)', maxWidth: 340 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: 28,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(125,180,235,0.32)',
+    borderColor: 'rgba(255,255,255,0.24)',
   },
-  cardTitle: { color: colors.text, fontSize: 24, fontWeight: '900', marginBottom: 14 },
+  cardTitle: { color: '#ffffff', fontSize: 24, fontWeight: '900', marginBottom: 14 },
   errorText: { color: '#b42318', fontWeight: '800', marginBottom: 10 },
   btn: { marginTop: 6 },
-  credHint: { marginTop: 10, color: 'rgba(24,49,79,0.55)', fontSize: 12 },
+  credHint: { marginTop: 10, color: 'rgba(255,255,255,0.75)', fontSize: 12 },
 });

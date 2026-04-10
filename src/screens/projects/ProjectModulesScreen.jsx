@@ -1,17 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { GradientCard } from '../../components/GradientCard';
+import { PressableCard } from '../../components/PressableCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
 const modules = [
-  { key: 'LabourList', title: 'Labour', subtitle: "Today's headcount & work done", icon: 'account-hard-hat', colors: ['#14532d', '#22c55e'] },
-  { key: 'MachineList', title: 'Machinery', subtitle: 'Hours, party & output', icon: 'excavator', colors: ['#9a3412', '#fb923c'] },
-  { key: 'MaterialList', title: 'Material', subtitle: 'Inward / outward items', icon: 'cube-outline', colors: ['#6b21a8', '#c084fc'] },
-  { key: 'StockModule', title: 'Stock', subtitle: 'Cement consumption & stock report', icon: 'warehouse', colors: ['#1e3a8a', '#60a5fa'] },
+  { key: 'LabourModule', title: 'Labour', subtitle: 'Add labour and view daily labour report', icon: 'account-hard-hat' },
+  { key: 'MachineList', title: 'Machinery', subtitle: 'Hours, party & output', icon: 'excavator' },
+  { key: 'MaterialList', title: 'Material', subtitle: 'Inward / outward items', icon: 'cube-outline' },
+  { key: 'StockModule', title: 'Stock', subtitle: 'Cement consumption & stock report', icon: 'warehouse' },
 ];
 
 export function ProjectModulesScreen({ route, navigation }) {
@@ -39,22 +39,26 @@ export function ProjectModulesScreen({ route, navigation }) {
             <Text style={styles.detailLabel}>Location</Text>
             <Text style={styles.detailValue}>{project?.location ?? '—'}</Text>
           </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Manager access</Text>
+            <Text style={styles.detailValue}>Labour, material, machinery, stock</Text>
+          </View>
         </View>
 
         <Text style={styles.modulesTitle}>Modules</Text>
         {modules.map((m) => (
-          <Pressable key={m.key} onPress={() => navigation.navigate(m.key, { projectId })} style={styles.modPress}>
-            <GradientCard colors={m.colors} style={styles.modCard}>
-              <View style={styles.modRow}>
-                <MaterialCommunityIcons name={m.icon} size={24} color="#fff" />
-                <View style={styles.modText}>
-                  <Text style={styles.modTitle}>{m.title}</Text>
-                  <Text style={styles.modSub}>{m.subtitle}</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={26} color="rgba(255,255,255,0.9)" />
+          <PressableCard key={m.key} onPress={() => navigation.navigate(m.key, { projectId })} style={styles.modPress} gradientColors={['#2f86de', '#62b6ff']}>
+            <View style={styles.modRow}>
+              <View style={styles.iconWrap}>
+                <MaterialCommunityIcons name={m.icon} size={22} color="#1d78d8" />
               </View>
-            </GradientCard>
-          </Pressable>
+              <View style={styles.modText}>
+                <Text style={styles.modTitle}>{m.title}</Text>
+                <Text style={styles.modSub}>{m.subtitle}</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={26} color="rgba(24,49,79,0.55)" />
+            </View>
+          </PressableCard>
         ))}
       </ScrollView>
     </ScreenContainer>
@@ -66,11 +70,11 @@ const styles = StyleSheet.create({
   h1: { fontSize: 24, fontWeight: '900', color: colors.text },
   sub: { marginTop: 4, color: colors.mutedText, marginBottom: 14 },
   headerCard: {
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.72)',
-    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    padding: 16,
     marginBottom: 18,
   },
   sectionLabel: { color: colors.text, fontWeight: '900', marginBottom: 10 },
@@ -79,9 +83,16 @@ const styles = StyleSheet.create({
   detailValue: { color: colors.text, fontWeight: '900', textAlign: 'right', flexShrink: 1 },
   modulesTitle: { color: colors.text, fontWeight: '900', fontSize: 16, marginBottom: 10 },
   modPress: { marginBottom: 12 },
-  modCard: { width: '100%' },
   modRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(45,127,218,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   modText: { flex: 1 },
-  modTitle: { color: '#fff', fontSize: 17, fontWeight: '900' },
-  modSub: { marginTop: 4, color: 'rgba(255,255,255,0.88)', fontSize: 13 },
+  modTitle: { color: '#17324f', fontSize: 17, fontWeight: '900' },
+  modSub: { marginTop: 4, color: colors.mutedText, fontSize: 13 },
 });

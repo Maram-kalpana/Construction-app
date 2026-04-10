@@ -9,6 +9,7 @@ import { ExpenseListScreen } from '../../screens/accounts/ExpenseListScreen';
 import { HomeDashboardScreen } from '../../screens/home/HomeDashboardScreen';
 import { LabourFormScreen } from '../../screens/modules/LabourFormScreen';
 import { LabourListScreen } from '../../screens/modules/LabourListScreen';
+import { LabourModuleScreen } from '../../screens/modules/LabourModuleScreen';
 import { MachineFormScreen } from '../../screens/modules/MachineFormScreen';
 import { MachineListScreen } from '../../screens/modules/MachineListScreen';
 import { MaterialFormScreen } from '../../screens/modules/MaterialFormScreen';
@@ -22,9 +23,9 @@ import { VendorsListScreen } from '../../screens/vendors/VendorsListScreen';
 const Stack = createNativeStackNavigator();
 
 const screenOptions = {
-  headerStyle: { backgroundColor: '#0b1213' },
-  headerTintColor: '#e9f2f2',
-  contentStyle: { backgroundColor: '#061016' },
+  headerStyle: { backgroundColor: '#ffffff' },
+  headerTintColor: '#17324f',
+  contentStyle: { backgroundColor: '#e9f5ff' },
   headerShadowVisible: false,
 };
 
@@ -34,6 +35,7 @@ export function HomeStack() {
       <Stack.Screen name="HomeMain" component={HomeDashboardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProjectsList" component={ProjectsListScreen} options={{ title: 'Projects' }} />
       <Stack.Screen name="ProjectModules" component={ProjectModulesScreen} options={{ title: 'Site modules' }} />
+      <Stack.Screen name="LabourModule" component={LabourModuleScreen} options={{ title: 'Labour' }} />
       <Stack.Screen name="LabourList" component={LabourListScreen} options={{ title: "Today's labour" }} />
       <Stack.Screen name="LabourForm" component={LabourFormScreen} options={{ title: 'Labour entry' }} />
       <Stack.Screen name="MachineList" component={MachineListScreen} options={{ title: 'Machinery' }} />
