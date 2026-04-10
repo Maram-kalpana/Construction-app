@@ -22,7 +22,20 @@ export function LabourModuleScreen({ route, navigation }) {
             </View>
             <View style={styles.meta}>
               <Text style={styles.title}>Add Labour</Text>
-              <Text style={styles.desc}>Create or find worker by phone, then add today entry.</Text>
+              <Text style={styles.desc}>Only labour master fields: name, age, gender, phone, photo.</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={26} color="rgba(24,49,79,0.55)" />
+          </View>
+        </PressableCard>
+
+        <PressableCard onPress={() => navigation.navigate('LabourReportForm', { projectId })} gradientColors={['#2f86de', '#62b6ff']} style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.icon}>
+              <MaterialCommunityIcons name="clipboard-plus-outline" size={24} color="#1d78d8" />
+            </View>
+            <View style={styles.meta}>
+              <Text style={styles.title}>Add Labour Report</Text>
+              <Text style={styles.desc}>Only report fields: party, counts, work done.</Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={26} color="rgba(24,49,79,0.55)" />
           </View>

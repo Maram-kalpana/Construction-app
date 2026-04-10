@@ -27,8 +27,8 @@ export function LabourListScreen({ route, navigation }) {
           <Text style={styles.h1}>Labour report</Text>
           <Text style={styles.sub}>Party / masonry, mason count, skilled male, unskilled female — linked to worker profile.</Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('LabourForm', { projectId })} style={styles.topAction}>
-          <Text style={styles.topActionText}>Add labour</Text>
+        <Pressable onPress={() => navigation.navigate('LabourReportForm', { projectId })} style={styles.topAction}>
+          <Text style={styles.topActionText}>Add labour report</Text>
           <MaterialCommunityIcons name="plus-circle" size={20} color="#2d7fda" />
         </Pressable>
         <FlatList
@@ -39,7 +39,7 @@ export function LabourListScreen({ route, navigation }) {
             const person = labourPersonById(item.labourId);
             return (
               <Pressable
-                onPress={() => navigation.navigate('LabourForm', { projectId, entryId: item.id })}
+                onPress={() => navigation.navigate('LabourReportForm', { projectId, entryId: item.id })}
                 style={styles.card}
               >
                 <View style={styles.row}>
@@ -69,8 +69,8 @@ export function LabourListScreen({ route, navigation }) {
         />
         <View style={styles.footer}>
           <GradientButton
-            title="Add to today's labour"
-            onPress={() => navigation.navigate('LabourForm', { projectId })}
+            title="Add labour report"
+            onPress={() => navigation.navigate('LabourReportForm', { projectId })}
             left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
           />
         </View>
