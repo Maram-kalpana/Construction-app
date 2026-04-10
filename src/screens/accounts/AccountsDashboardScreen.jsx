@@ -1,12 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { GradientCard } from '../../components/GradientCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -78,14 +77,12 @@ export function AccountsDashboardScreen({ route, navigation }) {
         <View style={styles.totalEditor}>
           <Text style={styles.sectionTitle}>Total amount received</Text>
           <Text style={styles.sectionSub}>Update when funds are released for this project.</Text>
-          <TextInput
+          <AppTextField
             label="Total amount"
             value={draftTotal}
             onChangeText={setDraftTotal}
-            {...paperInputProps}
             keyboardType="numeric"
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="0"
           />
           <GradientButton
             title="Save total amount"
@@ -115,13 +112,12 @@ const styles = StyleSheet.create({
   actions: { marginTop: 14, gap: 12 },
   totalEditor: {
     marginTop: 18,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.78)',
-    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    padding: 16,
   },
   sectionTitle: { color: colors.text, fontWeight: '900', fontSize: 16 },
   sectionSub: { marginTop: 6, color: colors.mutedText, marginBottom: 12 },
-  input: { marginBottom: 12 },
 });

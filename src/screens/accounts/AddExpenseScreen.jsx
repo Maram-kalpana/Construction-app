@@ -1,11 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SegmentedButtons, TextInput } from 'react-native-paper';
+import { SegmentedButtons } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/theme';
@@ -36,13 +36,11 @@ export function AddExpenseScreen({ route, navigation }) {
           </Text>
 
           <View style={styles.formCard}>
-            <TextInput
+            <AppTextField
               label="Name / party name"
               value={name}
               onChangeText={setName}
-              {...paperInputProps}
-              style={styles.input}
-              textColor={colors.text}
+              placeholder="Enter party name"
             />
 
             <Text style={styles.label}>Type</Text>
@@ -64,26 +62,21 @@ export function AddExpenseScreen({ route, navigation }) {
               }}
             />
 
-            <TextInput
+            <AppTextField
               label="Amount"
               value={amount}
               onChangeText={setAmount}
-              {...paperInputProps}
               keyboardType="numeric"
-              style={styles.input}
-              textColor={colors.text}
-              left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="currency-inr" size={18} color={colors.mutedText} />} />}
+              placeholder="0"
             />
 
-            <TextInput
+            <AppTextField
               label="Description"
               value={description}
               onChangeText={setDescription}
-              {...paperInputProps}
-              style={styles.input}
               multiline
               numberOfLines={4}
-              textColor={colors.text}
+              placeholder="Optional notes"
             />
 
             <GradientButton
@@ -117,13 +110,12 @@ const styles = StyleSheet.create({
   sub: { marginTop: 6, color: colors.mutedText, marginBottom: 16, lineHeight: 18 },
   subMuted: { color: 'rgba(233,242,242,0.55)' },
   formCard: {
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.78)',
-    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    padding: 16,
   },
-  input: { marginBottom: 12 },
   label: { color: colors.text, fontWeight: '800', marginBottom: 10, marginTop: 4 },
   segment: { marginBottom: 12 },
   btn: { marginTop: 4 },
