@@ -5,6 +5,7 @@ import { TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -100,33 +101,27 @@ export function MachineFormScreen({ route, navigation }) {
             label="Party / equipment name"
             value={partyName}
             onChangeText={setPartyName}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <View style={styles.row2}>
             <TextInput
               label="Start"
               value={startTime}
               onChangeText={setStartTime}
-              mode="outlined"
-              outlineStyle={styles.outline}
+              {...paperInputProps}
               style={[styles.input, styles.half]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <TextInput
               label="Close"
               value={endTime}
               onChangeText={setEndTime}
               onBlur={applyComputedHours}
-              mode="outlined"
-              outlineStyle={styles.outline}
+              {...paperInputProps}
               style={[styles.input, styles.half]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
           </View>
           <Pressable onPress={applyComputedHours} style={styles.calc}>
@@ -136,24 +131,20 @@ export function MachineFormScreen({ route, navigation }) {
             label="Total hours"
             value={totalHrs}
             onChangeText={setTotalHrs}
-            mode="outlined"
+            {...paperInputProps}
             keyboardType="decimal-pad"
-            outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <TextInput
             label="Work done / measurements"
             value={workDone}
             onChangeText={setWorkDone}
-            mode="outlined"
+            {...paperInputProps}
             multiline
             numberOfLines={4}
-            outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <GradientButton
             title={editing ? 'Update row' : 'Save row'}
@@ -177,8 +168,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 32 },
   hint: { color: colors.mutedText, marginBottom: 12, lineHeight: 18 },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  input: { marginBottom: 12 },
   row2: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
   calc: { marginBottom: 10, alignSelf: 'flex-start' },

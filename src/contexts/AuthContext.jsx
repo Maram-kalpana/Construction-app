@@ -18,9 +18,10 @@ export function AuthProvider({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        // Always require explicit sign-in when app starts.
+        await AsyncStorage.removeItem(STORAGE_KEY);
         if (cancelled) return;
-        if (raw) setUser(JSON.parse(raw));
+        setUser(null);
       } finally {
         if (!cancelled) setIsRestoring(false);
       }

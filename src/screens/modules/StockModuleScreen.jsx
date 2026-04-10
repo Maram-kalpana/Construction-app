@@ -5,6 +5,7 @@ import { TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -75,24 +76,20 @@ export function StockModuleScreen({ route }) {
                 value={openBal}
                 onChangeText={setOpenBal}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                mode="outlined"
+                {...paperInputProps}
                 dense
-                outlineStyle={styles.outline}
                 style={[styles.input, styles.half]}
                 textColor={colors.text}
-                theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
               />
               <TextInput
                 label="Received"
                 value={received}
                 onChangeText={setReceived}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                mode="outlined"
+                {...paperInputProps}
                 dense
-                outlineStyle={styles.outline}
                 style={[styles.input, styles.half]}
                 textColor={colors.text}
-                theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
               />
             </View>
             <View style={styles.grid2}>
@@ -101,24 +98,20 @@ export function StockModuleScreen({ route }) {
                 value={cum}
                 onChangeText={setCum}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                mode="outlined"
+                {...paperInputProps}
                 dense
-                outlineStyle={styles.outline}
                 style={[styles.input, styles.half]}
                 textColor={colors.text}
-                theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
               />
               <TextInput
                 label="Balance"
                 value={bal}
                 onChangeText={setBal}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                mode="outlined"
+                {...paperInputProps}
                 dense
-                outlineStyle={styles.outline}
                 style={[styles.input, styles.half]}
                 textColor={colors.text}
-                theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
               />
             </View>
             <GradientButton
@@ -159,22 +152,18 @@ export function StockModuleScreen({ route }) {
               label="Work"
               value={work}
               onChangeText={setWork}
-              mode="outlined"
-              outlineStyle={styles.outline}
+              {...paperInputProps}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <TextInput
               label="Qty (bags)"
               value={qty}
               onChangeText={setQty}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="numeric"
-              outlineStyle={styles.outline}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <GradientButton title="Add consumption line" onPress={onAddLine} colors={['#0f172a', '#334155']} />
           </View>
@@ -188,13 +177,11 @@ export function StockModuleScreen({ route }) {
                 setRemarksLocal(t);
               }}
               onBlur={() => persistRemarks(remarksLocal)}
-              mode="outlined"
+              {...paperInputProps}
               multiline
               numberOfLines={6}
-              outlineStyle={styles.outline}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <GradientButton title="Save remarks" onPress={() => persistRemarks(remarksLocal)} colors={['#334155', '#64748b']} />
           </View>
@@ -220,8 +207,7 @@ const styles = StyleSheet.create({
   section: { color: colors.text, fontWeight: '900', marginBottom: 12 },
   grid2: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
-  input: { backgroundColor: 'transparent', marginBottom: 10 },
-  outline: { borderRadius: 12 },
+  input: { marginBottom: 10 },
   lineRow: {
     flexDirection: 'row',
     alignItems: 'center',

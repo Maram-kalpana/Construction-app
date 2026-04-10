@@ -5,10 +5,12 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/theme';
 
 export function VendorsListScreen({ navigation }) {
   const { vendors } = useApp();
+  const { user } = useAuth();
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -22,7 +24,12 @@ export function VendorsListScreen({ navigation }) {
           keyExtractor={(v) => v.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <Pressable onPress={() => navigation.navigate('VendorForm', { vendorId: item.id })} style={styles.card}>
+            <Pressable
+              onPress={() => {
+                if (user?.role === 'admin') navigation.navigate('VendorForm', { vendorId: item.id });
+              }}
+              style={styles.card}
+            >
               <View style={styles.row}>
                 <View style={styles.icon}>
                   <MaterialCommunityIcons name="store" size={22} color="#fff" />
@@ -32,7 +39,7 @@ export function VendorsListScreen({ navigation }) {
                   <Text style={styles.phone}>{item.phone || '—'}</Text>
                   {item.category ? <Text style={styles.cat}>{item.category}</Text> : null}
                 </View>
-                <MaterialCommunityIcons name="pencil" size={20} color={colors.mutedText} />
+                {user?.role === 'admin' ? <MaterialCommunityIcons name="pencil" size={20} color={colors.mutedText} /> : null}
               </View>
             </Pressable>
           )}
@@ -44,14 +51,16 @@ export function VendorsListScreen({ navigation }) {
             </View>
           }
         />
-        <View style={styles.footer}>
-          <GradientButton
-            title="Add vendor"
-            onPress={() => navigation.navigate('VendorForm', {})}
-            colors={['#7c3aed', '#a78bfa']}
-            left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
-          />
-        </View>
+        {user?.role === 'admin' ? (
+          <View style={styles.footer}>
+            <GradientButton
+              title="Add vendor"
+              onPress={() => navigation.navigate('VendorForm', {})}
+              colors={['#7c3aed', '#a78bfa']}
+              left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
+            />
+          </View>
+        ) : null}
       </View>
     </ScreenContainer>
   );

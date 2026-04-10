@@ -5,6 +5,7 @@ import { TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -56,32 +57,26 @@ export function VendorFormScreen({ route, navigation }) {
             label="Vendor name"
             value={name}
             onChangeText={setName}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <TextInput
             label="Phone"
             value={phone}
             onChangeText={setPhone}
-            mode="outlined"
+            {...paperInputProps}
             keyboardType="phone-pad"
-            outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <TextInput
             label="Category (cement, sand, hire, …)"
             value={category}
             onChangeText={setCategory}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <GradientButton
             title={existing ? 'Update vendor' : 'Save vendor'}
@@ -104,8 +99,7 @@ export function VendorFormScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 32 },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  input: { marginBottom: 12 },
   del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, justifyContent: 'center' },
   delText: { color: '#fca5a5', fontWeight: '800' },
 });
