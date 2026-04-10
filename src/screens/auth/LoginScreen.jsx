@@ -1,16 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  Animated,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,64 +32,27 @@ export function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const progress = useMemo(() => (Number(username.trim().length > 0) + Number(password.length > 0)) / 2, [username, password]);
   const disabled = username.trim().length < 3 || password.length < 3;
 
-  const curveAnim = useRef(new Animated.Value(0)).current;
-  const liquidAnim = useRef(new Animated.Value(0.22)).current;
-
-  useEffect(() => {
-    Animated.timing(curveAnim, {
-      toValue: progress,
-      duration: 360,
-      useNativeDriver: false,
-    }).start();
-    Animated.timing(liquidAnim, {
-      toValue: 0.22 + progress * 0.36,
-      duration: 380,
-      useNativeDriver: false,
-    }).start();
-  }, [curveAnim, liquidAnim, progress]);
-
-  const curveTop = curveAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['48%', '41%'],
-  });
-
-  const liquidHeight = liquidAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['22%', '58%'],
-  });
-
   return (
-    <View style={styles.root}>
-      <View style={styles.lightHalf} />
-      <View style={styles.darkHalf} />
-      <Animated.View style={[styles.waveWrap, { top: curveTop }]}>
-        <Svg width="100%" height={170}>
-          <Path
-            d="M0,70 C70,42 140,50 205,72 C256,88 308,90 380,54 L380,170 L0,170 Z"
-            fill={C.bgDark}
-          />
-        </Svg>
-      </Animated.View>
-
+    <ImageBackground source={require('../../../assets/construction1.jpg')} style={styles.root} resizeMode="cover">
+      <LinearGradient colors={['rgba(16,24,46,0.35)', 'rgba(16,24,46,0.78)']} style={StyleSheet.absoluteFill} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-        <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
-          <MaterialCommunityIcons name="water-outline" size={18} color={C.textLight} />
-          <View style={styles.topProfile}>
-            <MaterialCommunityIcons name="account" size={16} color={C.bgDark} />
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.topBar}>
+            <MaterialCommunityIcons name="water-outline" size={18} color="#dbe6ff" />
+            <View style={styles.topProfile}>
+              <MaterialCommunityIcons name="account" size={16} color="#1D1E3A" />
+            </View>
+            <MaterialCommunityIcons name="menu" size={18} color="#dbe6ff" />
           </View>
-          <MaterialCommunityIcons name="menu" size={18} color={C.textLight} />
-        </View>
 
-        <Text style={styles.title}>You need to drink more!</Text>
+          <Text style={styles.title}>You need to drink more!</Text>
 
-        <View style={styles.glassWrap}>
-          <Animated.View style={[styles.liquid, { height: liquidHeight }]} />
-          <View style={styles.waveBubble} />
-          <View style={styles.glassShade} />
-          <View style={styles.formArea}>
+          <View style={styles.card}>
             <Text style={styles.inputLabel}>Username</Text>
             <TextInput
               value={username}
@@ -114,84 +78,53 @@ export function LoginScreen() {
               style={styles.input}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
-          </View>
-          <Pressable
-            disabled={disabled}
-            onPress={async () => {
-              try {
-                await login({ username, password });
-              } catch {
-                setError('Invalid username or password');
-              }
-            }}
-            style={[styles.loginFab, disabled && styles.loginFabDisabled]}
-          >
-            <MaterialCommunityIcons name="arrow-right" size={30} color="#fff" />
-          </Pressable>
-        </View>
-
-        <View style={styles.bottomContent}>
-          <View style={styles.dayRow}>
-            {days.map((d) => (
-              <Text key={d} style={styles.dayText}>
-                {d}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.barRow}>
-            {[1, 1, 0, 0, 0, 1, 1].map((filled, idx) => (
-              <View key={`${idx}`} style={[styles.bar, filled ? styles.barFilled : styles.barEmpty]} />
-            ))}
-          </View>
-
-          <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-            <MaterialCommunityIcons name="home-outline" size={20} color="rgba(209,213,228,0.9)" />
-            <Pressable style={styles.centerDrop}>
-              <MaterialCommunityIcons name="water" size={22} color="#fff" />
+            <Pressable
+              disabled={disabled}
+              onPress={async () => {
+                try {
+                  await login({ username, password });
+                } catch {
+                  setError('Invalid username or password');
+                }
+              }}
+              style={[styles.loginBtn, disabled && styles.loginFabDisabled]}
+            >
+              <LinearGradient colors={['#1A6AFE', '#4A90E2']} style={styles.loginBtnGrad}>
+                <MaterialCommunityIcons name="arrow-right" size={30} color="#fff" />
+              </LinearGradient>
             </Pressable>
-            <MaterialCommunityIcons name="clock-outline" size={20} color="rgba(209,213,228,0.9)" />
           </View>
-        </View>
+
+          <View style={styles.bottomContent}>
+            <View style={styles.dayRow}>
+              {days.map((d) => (
+                <Text key={d} style={styles.dayText}>
+                  {d}
+                </Text>
+              ))}
+            </View>
+            <View style={styles.barRow}>
+              {[1, 1, 0, 0, 0, 1, 1].map((filled, idx) => (
+                <View key={`login-bar-${idx}`} style={[styles.bar, filled ? styles.barFilled : styles.barEmpty]} />
+              ))}
+            </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bgLight },
+  root: { flex: 1, backgroundColor: '#1D1E3A' },
   flex: { flex: 1 },
-  lightHalf: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: '50%',
-    backgroundColor: C.bgLight,
-  },
-  darkHalf: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '50%',
-    backgroundColor: C.bgDark,
-  },
-  waveCut: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-  },
-  waveWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 170,
-  },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 },
   topBar: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 14,
   },
   topProfile: {
     width: 24,
@@ -202,51 +135,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    marginTop: 18,
+    marginTop: 6,
     textAlign: 'center',
-    color: C.textLight,
-    fontSize: 15,
-    fontWeight: '600',
+    color: '#D1D5E4',
+    fontSize: 16,
+    fontWeight: '500',
   },
-  glassWrap: {
-    marginTop: 28,
-    marginHorizontal: 34,
-    height: 330,
-    borderRadius: 44,
-    overflow: 'hidden',
-    borderWidth: 0,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  card: {
+    marginTop: 18,
+    borderRadius: 34,
+    padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.26)',
     shadowColor: '#BEC7D8',
     shadowOpacity: 0.85,
     shadowRadius: 20,
     shadowOffset: { width: 10, height: 10 },
-    elevation: 10,
-  },
-  liquid: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: C.blue,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  waveBubble: {
-    position: 'absolute',
-    left: -14,
-    right: -14,
-    bottom: 148,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(26,106,254,0.9)',
-  },
-  glassShade: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.20)',
-  },
-  formArea: {
-    paddingTop: 24,
-    paddingHorizontal: 18,
+    elevation: 8,
   },
   inputLabel: {
     color: C.textDark,
@@ -257,10 +163,10 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 50,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     color: C.textDark,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -270,21 +176,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
-  loginFab: {
-    position: 'absolute',
-    bottom: 16,
-    alignSelf: 'center',
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: C.blue,
+  loginBtn: {
+    marginTop: 14,
+    borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
+  loginBtnGrad: {
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: C.blue,
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
   },
   loginFabDisabled: { opacity: 0.55 },
   error: {
@@ -293,9 +195,9 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
   bottomContent: {
-    marginTop: 'auto',
-    paddingHorizontal: 30,
-    paddingBottom: 6,
+    marginTop: 20,
+    paddingHorizontal: 10,
+    paddingBottom: 2,
   },
   dayRow: {
     marginTop: 12,
@@ -330,15 +232,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  centerDrop: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: C.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
   },
 });

@@ -13,6 +13,7 @@ export function GradientButton({ title, onPress, colors = [appColors.buttonStart
       style={({ pressed }) => [style, pressed && !disabled && styles.pressed, disabled && styles.disabled]}
     >
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+        <View style={styles.glassOverlay} />
         <View style={styles.row}>
           {left ? <View style={styles.left}>{left}</View> : null}
           <Text style={styles.text}>{title}</Text>
@@ -27,6 +28,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    overflow: 'hidden',
+  },
+  glassOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   left: { marginRight: 10 },

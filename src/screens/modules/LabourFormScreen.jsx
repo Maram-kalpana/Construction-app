@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -21,17 +21,12 @@ import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
 export function LabourFormScreen({ route, navigation }) {
-  const { projectId, entryId } = route.params;
+  const { labourId: routeLabourId } = route.params || {};
   const {
-    getDailyBundle,
     findLabourByPhone,
     upsertLabourPerson,
-    addLabourEntry,
-    deleteLabourEntry,
     labourPersonById,
-    dateKey,
   } = useApp();
-  const today = dateKey();
 
   const [phone, setPhone] = useState('');
   const [lookupHit, setLookupHit] = useState(null);
@@ -39,34 +34,20 @@ export function LabourFormScreen({ route, navigation }) {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('male');
   const [photoUri, setPhotoUri] = useState(null);
-  const [masteryName, setMasteryName] = useState('');
-  const [mason, setMason] = useState('');
-  const [maleSkilled, setMaleSkilled] = useState('');
-  const [femaleUnskilled, setFemaleUnskilled] = useState('');
-  const [others, setOthers] = useState('');
-  const [workDone, setWorkDone] = useState('');
   const [labourId, setLabourId] = useState(null);
 
-  const bundle = getDailyBundle(projectId, today);
-  const editingEntry = useMemo(() => bundle.labourEntries.find((e) => e.id === entryId) ?? null, [bundle.labourEntries, entryId]);
-
   useEffect(() => {
-    if (!editingEntry) return;
-    const person = labourPersonById(editingEntry.labourId);
-    setLabourId(editingEntry.labourId);
+    if (!routeLabourId) return;
+    const person = labourPersonById(routeLabourId);
+    if (!person) return;
+    setLabourId(routeLabourId);
     setPhone(person?.phone ?? '');
     setName(person?.name ?? '');
     setAge(person?.age ?? '');
     setGender(person?.gender ?? 'male');
     setPhotoUri(person?.photoUri ?? null);
     setLookupHit(person);
-    setMasteryName(editingEntry.masteryName ?? '');
-    setMason(String(editingEntry.mason ?? ''));
-    setMaleSkilled(String(editingEntry.maleSkilled ?? ''));
-    setFemaleUnskilled(String(editingEntry.femaleUnskilled ?? ''));
-    setOthers(String(editingEntry.others ?? ''));
-    setWorkDone(editingEntry.workDone ?? '');
-  }, [editingEntry, labourPersonById]);
+  }, [routeLabourId, labourPersonById]);
 
   const pickImage = async (useCamera) => {
     const perm = useCamera
@@ -112,40 +93,6 @@ export function LabourFormScreen({ route, navigation }) {
     return person;
   };
 
-  const onSave = async () => {
-    const person = await savePerson();
-    await addLabourEntry(
-      projectId,
-      {
-        id: editingEntry?.id,
-        labourId: person.id,
-        masteryName,
-        mason,
-        maleSkilled,
-        femaleUnskilled,
-        others,
-        workDone,
-      },
-      today,
-    );
-    navigation.goBack();
-  };
-
-  const onDelete = () => {
-    if (!editingEntry) return;
-    Alert.alert('Remove row', 'Delete this labour line from today?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteLabourEntry(projectId, editingEntry.id, today);
-          navigation.goBack();
-        },
-      },
-    ]);
-  };
-
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
@@ -173,11 +120,11 @@ export function LabourFormScreen({ route, navigation }) {
           <View style={styles.photoRow}>
             {photoUri ? <Image source={{ uri: photoUri }} style={styles.photo} /> : <View style={styles.photoPlaceholder} />}
             <View style={styles.photoActions}>
-              <GradientButton title="Take photo" onPress={() => pickImage(true)} colors={['#0f766e', '#14b8a6']} />
+              <GradientButton title="Take photo" onPress={() => pickImage(true)} colors={['#2f86de', '#62b6ff']} />
               <GradientButton
                 title="Gallery"
                 onPress={() => pickImage(false)}
-                colors={['#334155', '#64748b']}
+                colors={['#2f86de', '#62b6ff']}
                 style={styles.mt8}
               />
             </View>
@@ -217,78 +164,18 @@ export function LabourFormScreen({ route, navigation }) {
             }}
           />
 
-          <Text style={styles.section}>Daily labour row</Text>
-          <AppTextField
-            label="Party name"
-            value={masteryName}
-            onChangeText={setMasteryName}
-            style={styles.input}
-            placeholder="Enter party or mastery name"
-          />
-          <View style={styles.grid2}>
-            <AppTextField
-              label="Mason"
-              value={mason}
-              onChangeText={setMason}
-              keyboardType="numeric"
-              style={[styles.input, styles.half]}
-              placeholder="0"
-            />
-            <AppTextField
-              label="Male / skilled"
-              value={maleSkilled}
-              onChangeText={setMaleSkilled}
-              keyboardType="numeric"
-              style={[styles.input, styles.half]}
-              placeholder="0"
-            />
-          </View>
-          <View style={styles.grid2}>
-            <AppTextField
-              label="Female / unskilled"
-              value={femaleUnskilled}
-              onChangeText={setFemaleUnskilled}
-              keyboardType="numeric"
-              style={[styles.input, styles.half]}
-              placeholder="0"
-            />
-            <AppTextField
-              label="Others"
-              value={others}
-              onChangeText={setOthers}
-              keyboardType="numeric"
-              style={[styles.input, styles.half]}
-              placeholder="0"
-            />
-          </View>
-          <AppTextField
-            label="Work done / measurements"
-            value={workDone}
-            onChangeText={setWorkDone}
-            multiline
-            numberOfLines={3}
-            style={styles.input}
-            placeholder="Enter work details for today's report"
-          />
-
           <GradientButton
-            title={editingEntry ? "Update today's row" : "Add to today's list"}
+            title={routeLabourId ? 'Update labour' : 'Save labour'}
             onPress={async () => {
               if (!phone.trim() || name.trim().length < 2) {
                 Alert.alert('Missing info', 'Enter phone and name.');
                 return;
               }
-              await onSave();
+              await savePerson();
+              navigation.goBack();
             }}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
-
-          {editingEntry ? (
-            <Pressable onPress={onDelete} style={styles.deleteWrap}>
-              <MaterialCommunityIcons name="delete-outline" size={20} color="#fca5a5" />
-              <Text style={styles.deleteText}>Remove from today</Text>
-            </Pressable>
-          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -326,9 +213,4 @@ const styles = StyleSheet.create({
   photoActions: { flex: 1, gap: 8 },
   mt8: { marginTop: 0 },
   segment: { marginBottom: 14 },
-  section: { color: colors.text, fontWeight: '900', fontSize: 16, marginVertical: 10 },
-  grid2: { flexDirection: 'row', gap: 10 },
-  half: { flex: 1 },
-  deleteWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, justifyContent: 'center' },
-  deleteText: { color: '#fca5a5', fontWeight: '800' },
 });
