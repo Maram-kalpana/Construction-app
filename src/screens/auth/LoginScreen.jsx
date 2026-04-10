@@ -7,12 +7,12 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppTextField } from '../../components/AppTextField';
 import { useAuth } from '../../contexts/AuthContext';
 
 const C = {
@@ -89,8 +89,8 @@ export function LoginScreen() {
           <View style={styles.waveBubble} />
           <View style={styles.glassShade} />
           <View style={styles.formArea}>
-            <AppTextField
-              label="Username"
+            <Text style={styles.inputLabel}>Username</Text>
+            <TextInput
               value={username}
               onChangeText={(t) => {
                 setUsername(t);
@@ -98,15 +98,11 @@ export function LoginScreen() {
               }}
               autoCapitalize="none"
               placeholder="Enter username"
-              labelColor={C.textDark}
-              textColor={C.textDark}
-              placeholderColor="rgba(209,213,228,0.62)"
-              borderColor="rgba(255,255,255,0.22)"
-                backgroundColor="rgba(255,255,255,0.08)"
-                inputStyle={styles.insetInput}
+              placeholderTextColor="rgba(209,213,228,0.62)"
+              style={styles.input}
             />
-            <AppTextField
-              label="Password"
+            <Text style={[styles.inputLabel, { marginTop: 8 }]}>Password</Text>
+            <TextInput
               value={password}
               onChangeText={(t) => {
                 setPassword(t);
@@ -114,12 +110,8 @@ export function LoginScreen() {
               }}
               secureTextEntry
               placeholder="Enter password"
-              labelColor={C.textDark}
-              textColor={C.textDark}
-              placeholderColor="rgba(209,213,228,0.62)"
-              borderColor="rgba(255,255,255,0.22)"
-                backgroundColor="rgba(255,255,255,0.08)"
-                inputStyle={styles.insetInput}
+              placeholderTextColor="rgba(209,213,228,0.62)"
+              style={styles.input}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
@@ -225,8 +217,8 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     backgroundColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#BEC7D8',
-    shadowOpacity: 1,
-    shadowRadius: 16,
+    shadowOpacity: 0.85,
+    shadowRadius: 20,
     shadowOffset: { width: 10, height: 10 },
     elevation: 10,
   },
@@ -255,6 +247,28 @@ const styles = StyleSheet.create({
   formArea: {
     paddingTop: 24,
     paddingHorizontal: 18,
+  },
+  inputLabel: {
+    color: C.textDark,
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 4,
+    marginBottom: 8,
+  },
+  input: {
+    minHeight: 50,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    color: C.textDark,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
   loginFab: {
     position: 'absolute',
@@ -326,12 +340,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.32)',
-  },
-  insetInput: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.26,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
   },
 });

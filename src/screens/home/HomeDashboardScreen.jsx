@@ -4,10 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { useAuth } from '../../contexts/AuthContext';
 
 export function HomeDashboardScreen({ navigation }) {
-  const { user } = useAuth();
   const dateItems = [
     { id: 'd-01', label: '01\nM' },
     { id: 'd-02', label: '02\nT' },
@@ -43,9 +41,6 @@ export function HomeDashboardScreen({ navigation }) {
     },
   ];
 
-  const greetingName = user?.name || 'Manager';
-  const companyName = user?.companyName || 'Srutika Constructions';
-
   return (
     <ScreenContainer edges={['top', 'left', 'right']} style={styles.noPad}>
       <View style={styles.root}>
@@ -58,9 +53,11 @@ export function HomeDashboardScreen({ navigation }) {
 
             <View style={styles.titleRow}>
               <View>
-                <Text style={styles.h1}>Hello, {greetingName}</Text>
-                <Text style={styles.company}>{companyName}</Text>
+                <Text style={styles.h1}>My Task</Text>
                 <Text style={styles.sub}>Today</Text>
+              </View>
+              <View style={styles.profileWrap}>
+                <MaterialCommunityIcons name="account" size={18} color="#1d5fa8" />
               </View>
             </View>
 
@@ -135,8 +132,15 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   h1: { fontSize: 36, fontWeight: '900', color: '#1f2e49' },
-  company: { marginTop: 4, color: '#4A90E2', fontWeight: '700', fontSize: 13 },
   sub: { marginTop: 4, color: '#7f8ba3', fontWeight: '700', fontSize: 16 },
+  profileWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#e3f2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dayHint: { marginTop: 8, color: '#9db2cb', fontSize: 12, textAlign: 'right' },
   dateRow: { marginTop: 10, gap: 8, paddingRight: 8 },
   datePill: {
