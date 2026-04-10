@@ -12,11 +12,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SegmentedButtons, TextInput } from 'react-native-paper';
+import { SegmentedButtons } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -152,14 +152,13 @@ export function LabourFormScreen({ route, navigation }) {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>Phone (lookup)</Text>
           <View style={styles.rowPhone}>
-            <TextInput
+            <AppTextField
               label="Phone number"
               value={phone}
               onChangeText={setPhone}
-              {...paperInputProps}
               keyboardType="phone-pad"
               style={[styles.input, styles.inputFlex]}
-              textColor={colors.text}
+              placeholder="Search by phone number"
             />
             <Pressable onPress={onLookup} style={styles.lookupBtn}>
               <Text style={styles.lookupText}>Find</Text>
@@ -184,22 +183,20 @@ export function LabourFormScreen({ route, navigation }) {
             </View>
           </View>
 
-          <TextInput
+          <AppTextField
             label="Full name"
             value={name}
             onChangeText={setName}
-            {...paperInputProps}
             style={styles.input}
-            textColor={colors.text}
+            placeholder="Enter labour name"
           />
-          <TextInput
+          <AppTextField
             label="Age"
             value={age}
             onChangeText={setAge}
-            {...paperInputProps}
             keyboardType="numeric"
             style={styles.input}
-            textColor={colors.text}
+            placeholder="Enter age"
           />
           <Text style={styles.label}>Gender</Text>
           <SegmentedButtons
@@ -221,63 +218,57 @@ export function LabourFormScreen({ route, navigation }) {
           />
 
           <Text style={styles.section}>Daily labour row</Text>
-          <TextInput
-            label="Masonry / party name"
+          <AppTextField
+            label="Party name"
             value={masteryName}
             onChangeText={setMasteryName}
-            {...paperInputProps}
             style={styles.input}
-            textColor={colors.text}
+            placeholder="Enter party or mastery name"
           />
           <View style={styles.grid2}>
-            <TextInput
+            <AppTextField
               label="Mason"
               value={mason}
               onChangeText={setMason}
-              {...paperInputProps}
               keyboardType="numeric"
               style={[styles.input, styles.half]}
-              textColor={colors.text}
+              placeholder="0"
             />
-            <TextInput
+            <AppTextField
               label="Male / skilled"
               value={maleSkilled}
               onChangeText={setMaleSkilled}
-              {...paperInputProps}
               keyboardType="numeric"
               style={[styles.input, styles.half]}
-              textColor={colors.text}
+              placeholder="0"
             />
           </View>
           <View style={styles.grid2}>
-            <TextInput
+            <AppTextField
               label="Female / unskilled"
               value={femaleUnskilled}
               onChangeText={setFemaleUnskilled}
-              {...paperInputProps}
               keyboardType="numeric"
               style={[styles.input, styles.half]}
-              textColor={colors.text}
+              placeholder="0"
             />
-            <TextInput
+            <AppTextField
               label="Others"
               value={others}
               onChangeText={setOthers}
-              {...paperInputProps}
               keyboardType="numeric"
               style={[styles.input, styles.half]}
-              textColor={colors.text}
+              placeholder="0"
             />
           </View>
-          <TextInput
+          <AppTextField
             label="Work done / measurements"
             value={workDone}
             onChangeText={setWorkDone}
-            {...paperInputProps}
             multiline
             numberOfLines={3}
             style={styles.input}
-            textColor={colors.text}
+            placeholder="Enter work details for today's report"
           />
 
           <GradientButton
@@ -308,27 +299,27 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 40 },
   label: { color: colors.text, fontWeight: '800', marginBottom: 8 },
-  rowPhone: { flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 6 },
+  rowPhone: { flexDirection: 'row', gap: 10, alignItems: 'flex-end', marginBottom: 6 },
   inputFlex: { flex: 1 },
   input: { marginBottom: 12 },
   lookupBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: 'rgba(125,211,252,0.18)',
+    paddingVertical: 18,
+    borderRadius: 18,
+    backgroundColor: 'rgba(59,144,232,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(125,211,252,0.35)',
+    borderColor: 'rgba(59,144,232,0.28)',
   },
-  lookupText: { color: '#7dd3fc', fontWeight: '900' },
-  hint: { color: '#86efac', marginBottom: 12, fontWeight: '700' },
+  lookupText: { color: '#215da1', fontWeight: '900' },
+  hint: { color: '#137333', marginBottom: 12, fontWeight: '700' },
   hintMuted: { color: colors.mutedText, marginBottom: 12 },
   photoRow: { flexDirection: 'row', gap: 14, marginBottom: 14, alignItems: 'center' },
-  photo: { width: 96, height: 96, borderRadius: 16, backgroundColor: '#111' },
+  photo: { width: 96, height: 96, borderRadius: 18, backgroundColor: '#dbeafe' },
   photoPlaceholder: {
     width: 96,
     height: 96,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 1,
     borderColor: colors.outline,
   },
