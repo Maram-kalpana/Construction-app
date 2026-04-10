@@ -35,7 +35,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
         <Text style={styles.sub}>{project ? `${project.name} • ${project.location}` : `Project ${projectId}`}</Text>
 
         <View style={styles.grid}>
-          <GradientCard colors={[colors.totalStart, colors.totalEnd]} style={styles.card}>
+          <GradientCard colors={['#2f86de', '#62b6ff']} style={styles.card}>
             <View style={styles.cardTop}>
               <MaterialCommunityIcons name="cash-plus" size={22} color="#fff" />
               <Text style={styles.cardLabel}>Total amount</Text>
@@ -43,7 +43,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
             <Text style={styles.cardValue}>{formatINR(ledger.totalAmount)}</Text>
           </GradientCard>
 
-          <GradientCard colors={[colors.expenseStart, colors.expenseEnd]} style={styles.card}>
+          <GradientCard colors={['#2f86de', '#62b6ff']} style={styles.card}>
             <View style={styles.cardTop}>
               <MaterialCommunityIcons name="cash-minus" size={22} color="#fff" />
               <Text style={styles.cardLabel}>Expenses</Text>
@@ -51,7 +51,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
             <Text style={styles.cardValue}>{formatINR(totalExpenses)}</Text>
           </GradientCard>
 
-          <GradientCard colors={[colors.balanceStart, colors.balanceEnd]} style={styles.cardWide}>
+          <GradientCard colors={['#2f86de', '#62b6ff']} style={styles.cardWide}>
             <View style={styles.cardTop}>
               <MaterialCommunityIcons name="wallet" size={22} color="#fff" />
               <Text style={styles.cardLabel}>Balance</Text>
@@ -91,7 +91,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
               if (!Number.isFinite(next) || next < 0) return;
               void setTotalAmount(projectId, next);
             }}
-            colors={[colors.totalStart, colors.totalEnd]}
+            colors={['#2f86de', '#62b6ff']}
           />
         </View>
       </ScrollView>

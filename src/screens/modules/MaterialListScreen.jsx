@@ -51,14 +51,14 @@ export function MaterialListScreen({ route, navigation }) {
           <GradientButton
             title="Add inward"
             onPress={() => navigation.navigate('MaterialForm', { projectId, direction: 'in' })}
-            colors={['#15803d', '#4ade80']}
+            colors={['#2f86de', '#62b6ff']}
             style={styles.halfBtn}
             left={<MaterialCommunityIcons name="arrow-down-bold" size={18} color="#fff" />}
           />
           <GradientButton
             title="Add outward"
             onPress={() => navigation.navigate('MaterialForm', { projectId, direction: 'out' })}
-            colors={['#b91c1c', '#f87171']}
+            colors={['#2f86de', '#62b6ff']}
             style={styles.halfBtn}
             left={<MaterialCommunityIcons name="arrow-up-bold" size={18} color="#fff" />}
           />
@@ -95,16 +95,16 @@ const styles = StyleSheet.create({
   halfBtn: { flex: 1 },
   list: { padding: 16, paddingBottom: 28, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.outline,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   badge: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10 },
-  badgeIn: { backgroundColor: 'rgba(74,222,128,0.2)' },
-  badgeOut: { backgroundColor: 'rgba(248,113,113,0.2)' },
+  badgeIn: { backgroundColor: 'rgba(45,127,218,0.15)' },
+  badgeOut: { backgroundColor: 'rgba(45,127,218,0.15)' },
   badgeText: { color: colors.text, fontWeight: '900', fontSize: 11 },
   meta: { flex: 1 },
   name: { color: colors.text, fontSize: 15, fontWeight: '900' },
@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     padding: 22,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },

@@ -28,7 +28,7 @@ export function MachineListScreen({ route, navigation }) {
             <Pressable onPress={() => navigation.navigate('MachineForm', { projectId, entryId: item.id })} style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.icon}>
-                  <MaterialCommunityIcons name="excavator" size={22} color="#fff" />
+                  <MaterialCommunityIcons name="excavator" size={22} color="#2f86de" />
                 </View>
                 <View style={styles.meta}>
                   <Text style={styles.name}>{item.partyName || 'Party'}</Text>
@@ -53,7 +53,7 @@ export function MachineListScreen({ route, navigation }) {
           <GradientButton
             title="Add machine shift"
             onPress={() => navigation.navigate('MachineForm', { projectId })}
-            colors={['#9a3412', '#fb923c']}
+            colors={['#2f86de', '#62b6ff']}
             left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
           />
         </View>
@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18 },
   list: { padding: 16, paddingBottom: 120, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.outline,
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(251,146,60,0.25)',
+    backgroundColor: 'rgba(98,182,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -91,10 +91,10 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     padding: 22,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },
