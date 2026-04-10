@@ -9,9 +9,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/theme';
@@ -33,7 +33,7 @@ export function LoginScreen() {
         imageStyle={styles.bgImage}
       >
         <LinearGradient
-          colors={['rgba(6,16,22,0.25)', 'rgba(6,16,22,0.88)', 'rgba(6,16,22,0.95)']}
+          colors={['rgba(233,245,255,0.12)', 'rgba(233,245,255,0.78)', 'rgba(233,245,255,0.94)']}
           style={StyleSheet.absoluteFill}
         />
         <KeyboardAvoidingView
@@ -62,37 +62,25 @@ export function LoginScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Sign in</Text>
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              <TextInput
+              <AppTextField
                 label="Username"
                 value={username}
                 onChangeText={(t) => {
                   setUsername(t);
                   if (error) setError('');
                 }}
-                mode="outlined"
                 autoCapitalize="none"
-                outlineStyle={styles.outline}
-                style={styles.input}
-                textColor={colors.text}
-                activeOutlineColor="#7dd3fc"
-                outlineColor="rgba(233,242,242,0.18)"
-                theme={{ roundness: 14, colors: { background: 'rgba(255,255,255,0.04)' } }}
+                placeholder="Enter username"
               />
-              <TextInput
+              <AppTextField
                 label="Password"
                 value={password}
                 onChangeText={(t) => {
                   setPassword(t);
                   if (error) setError('');
                 }}
-                mode="outlined"
                 secureTextEntry
-                outlineStyle={styles.outline}
-                style={styles.input}
-                textColor={colors.text}
-                activeOutlineColor="#7dd3fc"
-                outlineColor="rgba(233,242,242,0.18)"
-                theme={{ roundness: 14, colors: { background: 'rgba(255,255,255,0.04)' } }}
+                placeholder="Enter password"
               />
               <GradientButton
                 title="Continue"
@@ -104,7 +92,7 @@ export function LoginScreen() {
                   }
                 }}
                 disabled={disabled}
-                colors={['#0ea5e9', '#0369a1']}
+                colors={['#3b90e8', '#61b8ff']}
                 style={styles.btn}
               />
               <Text style={styles.credHint}>Demo login: manager / manager123</Text>
@@ -117,26 +105,24 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#061016' },
+  root: { flex: 1, backgroundColor: '#e9f5ff' },
   bg: { flex: 1 },
-  bgImage: { transform: [{ scale: 1.08 }], opacity: 0.55 },
+  bgImage: { transform: [{ scale: 1.04 }], opacity: 0.42 },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, justifyContent: 'center' },
   brandBlock: { marginBottom: 18 },
-  kicker: { color: 'rgba(233,242,242,0.75)', fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
-  title: { marginTop: 8, fontSize: 34, fontWeight: '900', color: '#fff', letterSpacing: 0.2 },
-  subtitle: { marginTop: 10, fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.82)', maxWidth: 340 },
+  kicker: { color: 'rgba(24,49,79,0.72)', fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
+  title: { marginTop: 8, fontSize: 34, fontWeight: '900', color: '#17324f', letterSpacing: 0.2 },
+  subtitle: { marginTop: 10, fontSize: 15, lineHeight: 22, color: 'rgba(24,49,79,0.82)', maxWidth: 340 },
   card: {
-    backgroundColor: 'rgba(8,18,26,0.82)',
-    borderRadius: 20,
-    padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderRadius: 28,
+    padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(125,211,252,0.22)',
+    borderColor: 'rgba(125,180,235,0.32)',
   },
-  cardTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 14 },
-  errorText: { color: '#fecaca', fontWeight: '800', marginBottom: 10 },
-  input: { marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  cardTitle: { color: colors.text, fontSize: 24, fontWeight: '900', marginBottom: 14 },
+  errorText: { color: '#b42318', fontWeight: '800', marginBottom: 10 },
   btn: { marginTop: 6 },
-  credHint: { marginTop: 10, color: 'rgba(233,242,242,0.55)', fontSize: 12 },
+  credHint: { marginTop: 10, color: 'rgba(24,49,79,0.55)', fontSize: 12 },
 });

@@ -27,6 +27,10 @@ export function LabourListScreen({ route, navigation }) {
           <Text style={styles.h1}>Labour report</Text>
           <Text style={styles.sub}>Party / masonry, mason count, skilled male, unskilled female — linked to worker profile.</Text>
         </View>
+        <Pressable onPress={() => navigation.navigate('LabourForm', { projectId })} style={styles.topAction}>
+          <Text style={styles.topActionText}>Add labour</Text>
+          <MaterialCommunityIcons name="plus-circle" size={20} color="#2d7fda" />
+        </Pressable>
         <FlatList
           data={rows}
           keyExtractor={(item) => item.id}
@@ -80,10 +84,25 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   h1: { color: colors.text, fontSize: 22, fontWeight: '900' },
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18 },
+  topAction: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(95,159,228,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  topActionText: { color: '#21456a', fontWeight: '900', fontSize: 15 },
   list: { padding: 16, paddingBottom: 120, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.outline,
@@ -93,7 +112,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(34,197,94,0.25)',
+    backgroundColor: 'rgba(98,182,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -104,12 +123,12 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     padding: 22,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },
-  footer: { position: 'absolute', left: 16, right: 16, bottom: 16 },
+  footer: { position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 20, elevation: 8 },
 });

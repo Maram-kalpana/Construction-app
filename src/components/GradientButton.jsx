@@ -6,7 +6,12 @@ import { colors as appColors } from '../theme/theme';
 
 export function GradientButton({ title, onPress, colors = [appColors.buttonStart, appColors.buttonEnd], style, disabled, left }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={[style, disabled && styles.disabled]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={8}
+      style={({ pressed }) => [style, pressed && !disabled && styles.pressed, disabled && styles.disabled]}
+    >
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
         <View style={styles.row}>
           {left ? <View style={styles.left}>{left}</View> : null}
@@ -26,5 +31,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   left: { marginRight: 10 },
   text: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.6 },
 });
