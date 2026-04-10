@@ -1,11 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -97,59 +96,51 @@ export function MachineFormScreen({ route, navigation }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Text style={styles.hint}>Use 12h or 24h times, e.g. 9:00 AM or 17:30</Text>
-          <TextInput
+          <AppTextField
             label="Party / equipment name"
             value={partyName}
             onChangeText={setPartyName}
-            {...paperInputProps}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="e.g. JCB / Mixer / Hired plant"
           />
           <View style={styles.row2}>
-            <TextInput
+            <AppTextField
               label="Start"
               value={startTime}
               onChangeText={setStartTime}
-              {...paperInputProps}
               style={[styles.input, styles.half]}
-              textColor={colors.text}
+              placeholder="9:00 AM"
             />
-            <TextInput
+            <AppTextField
               label="Close"
               value={endTime}
               onChangeText={setEndTime}
               onBlur={applyComputedHours}
-              {...paperInputProps}
               style={[styles.input, styles.half]}
-              textColor={colors.text}
+              placeholder="5:30 PM"
             />
           </View>
           <Pressable onPress={applyComputedHours} style={styles.calc}>
             <Text style={styles.calcText}>Calculate hours from times</Text>
           </Pressable>
-          <TextInput
+          <AppTextField
             label="Total hours"
             value={totalHrs}
             onChangeText={setTotalHrs}
-            {...paperInputProps}
             keyboardType="decimal-pad"
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="0"
           />
-          <TextInput
+          <AppTextField
             label="Work done / measurements"
             value={workDone}
             onChangeText={setWorkDone}
-            {...paperInputProps}
             multiline
             numberOfLines={4}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="Enter work details"
           />
           <GradientButton
             title={editing ? 'Update row' : 'Save row'}
             onPress={onSave}
-            colors={['#9a3412', '#fb923c']}
+            colors={['#2f86de', '#62b6ff']}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
           {editing ? (
@@ -172,7 +163,7 @@ const styles = StyleSheet.create({
   row2: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
   calc: { marginBottom: 10, alignSelf: 'flex-start' },
-  calcText: { color: '#7dd3fc', fontWeight: '800', fontSize: 13 },
+  calcText: { color: '#1d78d8', fontWeight: '800', fontSize: 13 },
   del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, justifyContent: 'center' },
   delText: { color: '#fca5a5', fontWeight: '800' },
 });

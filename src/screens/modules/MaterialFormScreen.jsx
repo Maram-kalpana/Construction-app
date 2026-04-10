@@ -1,11 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -70,34 +69,28 @@ export function MaterialFormScreen({ route, navigation }) {
           <View style={styles.pill}>
             <Text style={styles.pillText}>{direction === 'out' ? 'Outgoing / used' : 'Incoming delivery'}</Text>
           </View>
-          <TextInput
+          <AppTextField
             label="Item name"
             value={itemName}
             onChangeText={setItemName}
-            {...paperInputProps}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="e.g. Cement / Sand / Bricks"
           />
-          <TextInput
+          <AppTextField
             label="Qty / nos."
             value={qty}
             onChangeText={setQty}
-            {...paperInputProps}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="0"
           />
-          <TextInput
+          <AppTextField
             label="Supplier (optional)"
             value={supplier}
             onChangeText={setSupplier}
-            {...paperInputProps}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="Optional"
           />
           <GradientButton
             title={editing ? 'Update' : 'Save'}
             onPress={onSave}
-            colors={direction === 'out' ? ['#b91c1c', '#f87171'] : ['#15803d', '#4ade80']}
+            colors={['#2f86de', '#62b6ff']}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
           {editing ? (
@@ -120,13 +113,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(125,211,252,0.15)',
+    backgroundColor: 'rgba(45,127,218,0.10)',
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(125,211,252,0.3)',
+    borderColor: 'rgba(45,127,218,0.22)',
   },
-  pillText: { color: '#7dd3fc', fontWeight: '900', fontSize: 12 },
-  input: { marginBottom: 12 },
+  pillText: { color: '#1d78d8', fontWeight: '900', fontSize: 12 },
   del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, justifyContent: 'center' },
   delText: { color: '#fca5a5', fontWeight: '800' },
 });

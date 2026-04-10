@@ -1,11 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -53,35 +52,29 @@ export function VendorFormScreen({ route, navigation }) {
     <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TextInput
+          <AppTextField
             label="Vendor name"
             value={name}
             onChangeText={setName}
-            {...paperInputProps}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="Enter vendor name"
           />
-          <TextInput
+          <AppTextField
             label="Phone"
             value={phone}
             onChangeText={setPhone}
-            {...paperInputProps}
             keyboardType="phone-pad"
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="Optional"
           />
-          <TextInput
+          <AppTextField
             label="Category (cement, sand, hire, …)"
             value={category}
             onChangeText={setCategory}
-            {...paperInputProps}
-            style={styles.input}
-            textColor={colors.text}
+            placeholder="Optional"
           />
           <GradientButton
             title={existing ? 'Update vendor' : 'Save vendor'}
             onPress={onSave}
-            colors={['#7c3aed', '#a78bfa']}
+            colors={['#2f86de', '#62b6ff']}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
           {existing ? (
@@ -99,7 +92,6 @@ export function VendorFormScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 32 },
-  input: { marginBottom: 12 },
   del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, justifyContent: 'center' },
   delText: { color: '#fca5a5', fontWeight: '800' },
 });

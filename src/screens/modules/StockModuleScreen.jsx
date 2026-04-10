@@ -1,11 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
 
+import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -71,53 +70,45 @@ export function StockModuleScreen({ route }) {
           <View style={styles.card}>
             <Text style={styles.section}>Cement stock report</Text>
             <View style={styles.grid2}>
-              <TextInput
+              <AppTextField
                 label="Open bal."
                 value={openBal}
                 onChangeText={setOpenBal}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                {...paperInputProps}
-                dense
-                style={[styles.input, styles.half]}
-                textColor={colors.text}
+                style={styles.halfWrap}
+                placeholder="0"
               />
-              <TextInput
+              <AppTextField
                 label="Received"
                 value={received}
                 onChangeText={setReceived}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                {...paperInputProps}
-                dense
-                style={[styles.input, styles.half]}
-                textColor={colors.text}
+                style={styles.halfWrap}
+                placeholder="0"
               />
             </View>
             <View style={styles.grid2}>
-              <TextInput
+              <AppTextField
                 label="Cumulative"
                 value={cum}
                 onChangeText={setCum}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                {...paperInputProps}
-                dense
-                style={[styles.input, styles.half]}
-                textColor={colors.text}
+                style={styles.halfWrap}
+                placeholder="0"
               />
-              <TextInput
+              <AppTextField
                 label="Balance"
                 value={bal}
                 onChangeText={setBal}
                 onBlur={() => persistStock({ openBal, received, cum, bal })}
-                {...paperInputProps}
-                dense
-                style={[styles.input, styles.half]}
-                textColor={colors.text}
+                style={styles.halfWrap}
+                placeholder="0"
               />
             </View>
             <GradientButton
               title="Save stock figures"
               onPress={() => persistStock({ openBal, received, cum, bal })}
-              colors={['#1e3a8a', '#60a5fa']}
+              colors={['#2f86de', '#62b6ff']}
               left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
             />
           </View>
@@ -148,42 +139,36 @@ export function StockModuleScreen({ route }) {
               )}
               ListEmptyComponent={<Text style={styles.empty}>No consumption lines yet.</Text>}
             />
-            <TextInput
+            <AppTextField
               label="Work"
               value={work}
               onChangeText={setWork}
-              {...paperInputProps}
-              style={styles.input}
-              textColor={colors.text}
+              placeholder="e.g. PCC work / brick work"
             />
-            <TextInput
+            <AppTextField
               label="Qty (bags)"
               value={qty}
               onChangeText={setQty}
-              {...paperInputProps}
               keyboardType="numeric"
-              style={styles.input}
-              textColor={colors.text}
+              placeholder="0"
             />
-            <GradientButton title="Add consumption line" onPress={onAddLine} colors={['#0f172a', '#334155']} />
+            <GradientButton title="Add consumption line" onPress={onAddLine} colors={['#2f86de', '#62b6ff']} />
           </View>
 
           <View style={styles.card}>
             <Text style={styles.section}>Remarks / details report</Text>
-            <TextInput
+            <AppTextField
               label="Narrative notes for the day"
               value={remarksLocal}
               onChangeText={(t) => {
                 setRemarksLocal(t);
               }}
               onBlur={() => persistRemarks(remarksLocal)}
-              {...paperInputProps}
               multiline
               numberOfLines={6}
-              style={styles.input}
-              textColor={colors.text}
+              placeholder="Write daily details..."
             />
-            <GradientButton title="Save remarks" onPress={() => persistRemarks(remarksLocal)} colors={['#334155', '#64748b']} />
+            <GradientButton title="Save remarks" onPress={() => persistRemarks(remarksLocal)} colors={['#2f86de', '#62b6ff']} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -197,17 +182,16 @@ const styles = StyleSheet.create({
   h1: { color: colors.text, fontSize: 22, fontWeight: '900' },
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18, marginBottom: 14 },
   card: {
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.72)',
-    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    padding: 16,
     marginBottom: 14,
   },
   section: { color: colors.text, fontWeight: '900', marginBottom: 12 },
   grid2: { flexDirection: 'row', gap: 10 },
-  half: { flex: 1 },
-  input: { marginBottom: 10 },
+  halfWrap: { flex: 1, marginBottom: 0 },
   lineRow: {
     flexDirection: 'row',
     alignItems: 'center',
