@@ -1,19 +1,15 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { GradientCard } from '../../components/GradientCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
-import type { ProjectsStackParamList } from '../../navigation/types';
 import { colors } from '../../theme/theme';
 
-type Props = NativeStackScreenProps<ProjectsStackParamList, 'Accounts'>;
-
-function formatINR(value: number) {
+function formatINR(value) {
   try {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
   } catch {
@@ -21,7 +17,7 @@ function formatINR(value: number) {
   }
 }
 
-export function AccountsDashboardScreen({ route, navigation }: Props) {
+export function AccountsDashboardScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { getLedger, setTotalAmount, projects } = useApp();
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
@@ -33,7 +29,7 @@ export function AccountsDashboardScreen({ route, navigation }: Props) {
   const [draftTotal, setDraftTotal] = useState(String(ledger.totalAmount));
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.h1}>Accounts</Text>
         <Text style={styles.sub}>{project ? `${project.name} • ${project.location}` : `Project ${projectId}`}</Text>
@@ -42,7 +38,7 @@ export function AccountsDashboardScreen({ route, navigation }: Props) {
           <GradientCard colors={[colors.totalStart, colors.totalEnd]} style={styles.card}>
             <View style={styles.cardTop}>
               <MaterialCommunityIcons name="cash-plus" size={22} color="#fff" />
-              <Text style={styles.cardLabel}>Total Amount</Text>
+              <Text style={styles.cardLabel}>Total amount</Text>
             </View>
             <Text style={styles.cardValue}>{formatINR(ledger.totalAmount)}</Text>
           </GradientCard>
@@ -66,12 +62,12 @@ export function AccountsDashboardScreen({ route, navigation }: Props) {
 
         <View style={styles.actions}>
           <GradientButton
-            title="Add Expense"
+            title="Add expense"
             onPress={() => navigation.navigate('AddExpense', { projectId })}
             left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
           />
           <GradientButton
-            title="View Expenses"
+            title="View expenses"
             onPress={() => navigation.navigate('ExpenseList', { projectId })}
             colors={[colors.brandStart, colors.brandEnd]}
             left={<MaterialCommunityIcons name="format-list-bulleted" size={18} color="#fff" />}
@@ -79,10 +75,10 @@ export function AccountsDashboardScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.totalEditor}>
-          <Text style={styles.sectionTitle}>Total Amount Received</Text>
-          <Text style={styles.sectionSub}>Update when Admin releases funds for this project.</Text>
+          <Text style={styles.sectionTitle}>Total amount received</Text>
+          <Text style={styles.sectionSub}>Update when funds are released for this project.</Text>
           <TextInput
-            label="Total Amount"
+            label="Total amount"
             value={draftTotal}
             onChangeText={setDraftTotal}
             mode="outlined"
@@ -90,10 +86,10 @@ export function AccountsDashboardScreen({ route, navigation }: Props) {
             outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#42a5f5', outline: colors.outline, background: 'transparent' } }}
+            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <GradientButton
-            title="Save Total Amount"
+            title="Save total amount"
             onPress={() => {
               const next = Number(draftTotal);
               if (!Number.isFinite(next) || next < 0) return;
@@ -131,4 +127,3 @@ const styles = StyleSheet.create({
   input: { backgroundColor: 'transparent', marginBottom: 12 },
   outline: { borderRadius: 14 },
 });
-

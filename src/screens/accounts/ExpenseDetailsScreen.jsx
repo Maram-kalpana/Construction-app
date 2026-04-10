@@ -1,17 +1,13 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { GradientButton } from '../../components/GradientButton';
 import { GradientCard } from '../../components/GradientCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import type { ProjectsStackParamList } from '../../navigation/types';
 import { colors } from '../../theme/theme';
 
-type Props = NativeStackScreenProps<ProjectsStackParamList, 'ExpenseDetails'>;
-
-function formatINR(value: number) {
+function formatINR(value) {
   try {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
   } catch {
@@ -19,14 +15,28 @@ function formatINR(value: number) {
   }
 }
 
-export function ExpenseDetailsScreen({ route, navigation }: Props) {
+function DetailRow({ icon, label, value }) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowLeft}>
+        <View style={styles.rowIcon}>
+          <MaterialCommunityIcons name={icon} size={18} color={colors.text} />
+        </View>
+        <Text style={styles.rowLabel}>{label}</Text>
+      </View>
+      <Text style={styles.rowValue}>{value}</Text>
+    </View>
+  );
+}
+
+export function ExpenseDetailsScreen({ route, navigation }) {
   const { projectId, expense } = route.params;
   const dateLabel = useMemo(() => new Date(expense.dateIso).toLocaleString(), [expense.dateIso]);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['top', 'left', 'right']}>
       <View style={styles.container}>
-        <Text style={styles.h1}>Expense Details</Text>
+        <Text style={styles.h1}>Expense details</Text>
         <Text style={styles.sub}>Project: {projectId}</Text>
 
         <GradientCard colors={[colors.expenseStart, colors.expenseEnd]} style={styles.hero}>
@@ -47,33 +57,19 @@ export function ExpenseDetailsScreen({ route, navigation }: Props) {
 
         <View style={styles.actions}>
           <GradientButton
-            title="View All Expenses"
+            title="View all expenses"
             onPress={() => navigation.navigate('ExpenseList', { projectId })}
             colors={[colors.brandStart, colors.brandEnd]}
             left={<MaterialCommunityIcons name="format-list-bulleted" size={18} color="#fff" />}
           />
           <GradientButton
-            title="Add Another Expense"
+            title="Add another expense"
             onPress={() => navigation.navigate('AddExpense', { projectId })}
             left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
           />
         </View>
       </View>
     </ScreenContainer>
-  );
-}
-
-function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowLeft}>
-        <View style={styles.rowIcon}>
-          <MaterialCommunityIcons name={icon as any} size={18} color={colors.text} />
-        </View>
-        <Text style={styles.rowLabel}>{label}</Text>
-      </View>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
   );
 }
 
@@ -108,4 +104,3 @@ const styles = StyleSheet.create({
   rowValue: { color: colors.text, fontWeight: '800', flex: 1, textAlign: 'right' },
   actions: { marginTop: 14, gap: 12 },
 });
-

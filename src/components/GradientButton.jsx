@@ -1,24 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors as appColors } from '../theme/theme';
 
-export function GradientButton({
-  title,
-  onPress,
-  colors = [appColors.buttonStart, appColors.buttonEnd],
-  style,
-  disabled,
-  left,
-}: {
-  title: string;
-  onPress: () => void;
-  colors?: [string, string];
-  style?: ViewStyle;
-  disabled?: boolean;
-  left?: React.ReactNode;
-}) {
+export function GradientButton({ title, onPress, colors = [appColors.buttonStart, appColors.buttonEnd], style, disabled, left }) {
   return (
     <Pressable onPress={onPress} disabled={disabled} style={[style, disabled && styles.disabled]}>
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
@@ -42,4 +28,3 @@ const styles = StyleSheet.create({
   text: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   disabled: { opacity: 0.6 },
 });
-

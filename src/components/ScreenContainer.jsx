@@ -1,21 +1,18 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { SafeAreaView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/theme';
 
-export function ScreenContainer({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: ViewStyle;
-}) {
+export function ScreenContainer({ children, style, edges = ['top', 'left', 'right'] }) {
   return (
     <View style={styles.root}>
       <LinearGradient colors={[colors.brandStart, colors.brandEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       <View style={styles.overlay} />
-      <SafeAreaView style={[styles.safe, style]}>{children}</SafeAreaView>
+      <SafeAreaView style={[styles.safe, style]} edges={edges}>
+        {children}
+      </SafeAreaView>
     </View>
   );
 }
@@ -25,7 +22,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.32)',
   },
 });
-

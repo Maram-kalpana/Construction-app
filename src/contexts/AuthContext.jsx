@@ -1,21 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import type { User } from '../types';
-
-type AuthState = {
-  user: User | null;
-  isRestoring: boolean;
-  login: (params: { emailOrPhone: string; password: string }) => Promise<void>;
-  logout: () => Promise<void>;
-};
-
 const STORAGE_KEY = '@constructionERP/auth';
 
-const AuthContext = createContext<AuthState | null>(null);
+const AuthContext = createContext(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
   const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
@@ -24,7 +15,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (cancelled) return;
-        if (raw) setUser(JSON.parse(raw) as User);
+        if (raw) setUser(JSON.parse(raw));
       } finally {
         if (!cancelled) setIsRestoring(false);
       }
@@ -34,8 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (params: { emailOrPhone: string; password: string }) => {
-    const nextUser: User = {
+  const login = useCallback(async (params) => {
+    const nextUser = {
       id: 'mgr-001',
       name: 'Site Manager',
       role: 'manager',
@@ -50,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const value = useMemo<AuthState>(() => ({ user, isRestoring, login, logout }), [user, isRestoring, login, logout]);
+  const value = useMemo(() => ({ user, isRestoring, login, logout }), [user, isRestoring, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -60,4 +51,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-

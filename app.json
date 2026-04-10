@@ -25,6 +25,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photos to attach a labour profile picture.",
+          "cameraPermission": "Allow the camera to capture a labour profile photo."
+        }
+      ]
+    ]
   }
 }

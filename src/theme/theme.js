@@ -1,9 +1,11 @@
-import { MD3LightTheme, type MD3Theme } from 'react-native-paper';
+import { MD3LightTheme } from 'react-native-paper';
 
 export const colors = {
-  brandStart: '#0f3d3e',
-  brandEnd: '#1f6f78',
-  buttonStart: '#1976d2',
+  brandStart: '#0a2540',
+  brandEnd: '#1a5f7a',
+  accentStart: '#c45c26',
+  accentEnd: '#f4a261',
+  buttonStart: '#1565c0',
   buttonEnd: '#42a5f5',
   totalStart: '#2e7d32',
   totalEnd: '#66bb6a',
@@ -18,13 +20,13 @@ export const colors = {
   outline: 'rgba(233, 242, 242, 0.18)',
 };
 
-export const paperTheme: MD3Theme = {
+export const paperTheme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
     primary: colors.buttonStart,
     secondary: colors.brandEnd,
-    background: '#071012',
+    background: '#061016',
     surface: '#0b1213',
     surfaceVariant: '#0f1d1f',
     outline: colors.outline,
@@ -34,4 +36,3 @@ export const paperTheme: MD3Theme = {
     onBackground: colors.text,
   },
 };
-

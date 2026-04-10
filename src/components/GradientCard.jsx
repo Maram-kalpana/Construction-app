@@ -1,16 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
-export function GradientCard({
-  colors,
-  children,
-  style,
-}: {
-  colors: [string, string];
-  children: React.ReactNode;
-  style?: ViewStyle;
-}) {
+export function GradientCard({ colors, children, style }) {
   return (
     <View style={[styles.shadowWrap, style]}>
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
@@ -40,4 +32,3 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
-

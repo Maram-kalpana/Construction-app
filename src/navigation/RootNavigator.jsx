@@ -1,17 +1,25 @@
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 import { useAuth } from '../contexts/AuthContext';
 import { paperTheme } from '../theme/theme';
-import type { RootStackParamList } from './types';
 import { AuthStack } from './auth/AuthStack';
 import { AppTabs } from './tabs/AppTabs';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator();
 
 export function RootNavigator() {
-  const { user } = useAuth();
+  const { user, isRestoring } = useAuth();
+
+  if (isRestoring) {
+    return (
+      <View style={styles.boot}>
+        <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer
@@ -34,3 +42,6 @@ export function RootNavigator() {
   );
 }
 
+const styles = StyleSheet.create({
+  boot: { flex: 1, backgroundColor: paperTheme.colors.background, alignItems: 'center', justifyContent: 'center' },
+});

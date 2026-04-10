@@ -1,27 +1,22 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SegmentedButtons, TextInput } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import type { ProjectsStackParamList } from '../../navigation/types';
-import type { ExpenseType } from '../../types';
 import { colors } from '../../theme/theme';
 
-type Props = NativeStackScreenProps<ProjectsStackParamList, 'AddExpense'>;
-
-export function AddExpenseScreen({ route, navigation }: Props) {
+export function AddExpenseScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { user } = useAuth();
   const { addExpense, projects } = useApp();
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
 
   const [name, setName] = useState('');
-  const [type, setType] = useState<ExpenseType>('Labour');
+  const [type, setType] = useState('Labour');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
@@ -29,31 +24,32 @@ export function AddExpenseScreen({ route, navigation }: Props) {
   const disabled = useMemo(() => name.trim().length < 2 || Number(amount) <= 0 || !Number.isFinite(Number(amount)), [name, amount]);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-          <Text style={styles.h1}>Add Expense</Text>
+          <Text style={styles.h1}>Add expense</Text>
           <Text style={styles.sub}>
-            {project ? `${project.name} • ${project.location}` : `Project ${projectId}`} {'\n'}
+            {project ? `${project.name} • ${project.location}` : `Project ${projectId}`}
+            {'\n'}
             <Text style={styles.subMuted}>Date: {dateLabel}</Text>
           </Text>
 
           <View style={styles.formCard}>
             <TextInput
-              label="Name / Party Name"
+              label="Name / party name"
               value={name}
               onChangeText={setName}
               mode="outlined"
               outlineStyle={styles.outline}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#42a5f5', outline: colors.outline, background: 'transparent' } }}
+              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
 
             <Text style={styles.label}>Type</Text>
             <SegmentedButtons
               value={type}
-              onValueChange={(v) => setType(v as ExpenseType)}
+              onValueChange={setType}
               style={styles.segment}
               buttons={[
                 { value: 'Labour', label: 'Labour' },
@@ -62,7 +58,7 @@ export function AddExpenseScreen({ route, navigation }: Props) {
               ]}
               theme={{
                 colors: {
-                  secondaryContainer: 'rgba(66,165,245,0.22)',
+                  secondaryContainer: 'rgba(125,211,252,0.22)',
                   onSecondaryContainer: colors.text,
                   outline: colors.outline,
                 },
@@ -78,7 +74,7 @@ export function AddExpenseScreen({ route, navigation }: Props) {
               outlineStyle={styles.outline}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#42a5f5', outline: colors.outline, background: 'transparent' } }}
+              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
               left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="currency-inr" size={18} color={colors.mutedText} />} />}
             />
 
@@ -92,11 +88,11 @@ export function AddExpenseScreen({ route, navigation }: Props) {
               multiline
               numberOfLines={4}
               textColor={colors.text}
-              theme={{ colors: { primary: '#42a5f5', outline: colors.outline, background: 'transparent' } }}
+              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
 
             <GradientButton
-              title="Save Expense"
+              title="Save expense"
               disabled={disabled}
               onPress={async () => {
                 if (!user) return;
@@ -138,4 +134,3 @@ const styles = StyleSheet.create({
   segment: { marginBottom: 12 },
   btn: { marginTop: 4 },
 });
-

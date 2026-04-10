@@ -1,16 +1,12 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
-import type { ProjectsStackParamList } from '../../navigation/types';
 import { colors } from '../../theme/theme';
 
-type Props = NativeStackScreenProps<ProjectsStackParamList, 'ExpenseList'>;
-
-function formatINR(value: number) {
+function formatINR(value) {
   try {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
   } catch {
@@ -18,7 +14,7 @@ function formatINR(value: number) {
   }
 }
 
-export function ExpenseListScreen({ route, navigation }: Props) {
+export function ExpenseListScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { getLedger } = useApp();
 
@@ -26,11 +22,13 @@ export function ExpenseListScreen({ route, navigation }: Props) {
   const totalExpenses = useMemo(() => ledger.expenses.reduce((sum, e) => sum + e.amount, 0), [ledger.expenses]);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.h1}>Expenses</Text>
-          <Text style={styles.sub}>{ledger.expenses.length} entries • {formatINR(totalExpenses)}</Text>
+          <Text style={styles.sub}>
+            {ledger.expenses.length} entries • {formatINR(totalExpenses)}
+          </Text>
         </View>
 
         <FlatList
@@ -38,10 +36,7 @@ export function ExpenseListScreen({ route, navigation }: Props) {
           keyExtractor={(e) => e.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => navigation.navigate('ExpenseDetails', { projectId, expense: item })}
-              style={styles.card}
-            >
+            <Pressable onPress={() => navigation.navigate('ExpenseDetails', { projectId, expense: item })} style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.iconWrap}>
                   <MaterialCommunityIcons name="receipt" size={20} color="#fff" />
@@ -60,7 +55,7 @@ export function ExpenseListScreen({ route, navigation }: Props) {
             <View style={styles.empty}>
               <MaterialCommunityIcons name="cash-remove" size={32} color="rgba(233,242,242,0.7)" />
               <Text style={styles.emptyTitle}>No expenses yet</Text>
-              <Text style={styles.emptyText}>Tap “Add Expense” from Accounts to create the first entry.</Text>
+              <Text style={styles.emptyText}>Tap “Add expense” from Accounts to create the first entry.</Text>
             </View>
           }
         />
@@ -108,4 +103,3 @@ const styles = StyleSheet.create({
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },
 });
-
