@@ -20,13 +20,17 @@ export function ProfileScreen() {
           </View>
           <Text style={styles.name}>{user?.name ?? 'Manager'}</Text>
           <Text style={styles.role}>{user?.role === 'manager' ? 'Site manager' : user?.role ?? 'User'}</Text>
-          <Text style={styles.contact}>{user?.emailOrPhone ?? ''}</Text>
+          <Text style={styles.contact}>{user?.phone ?? ''}</Text>
         </LinearGradient>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Signed in</Text>
-          <Text style={styles.value}>Construction ERP mobile</Text>
-          <Text style={styles.hint}>Daily reports sync locally on this device until you connect a backend.</Text>
+          <Text style={styles.label}>Manager Details</Text>
+          <Text style={styles.value}>Name: {user?.name ?? '—'}</Text>
+          <Text style={styles.value2}>Age: {user?.age ?? '—'}</Text>
+          <Text style={styles.value2}>Gender: {user?.gender ?? '—'}</Text>
+          <Text style={styles.value2}>Phone: {user?.phone ?? '—'}</Text>
+          <Text style={styles.value2}>Role: {user?.role ?? '—'}</Text>
+          <Text style={styles.hint}>Construction: {user?.companyName ?? 'Srutika Constructions'}</Text>
         </View>
 
         <View style={styles.spacer} />
@@ -58,15 +62,16 @@ const styles = StyleSheet.create({
   role: { marginTop: 4, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
   contact: { marginTop: 8, color: 'rgba(255,255,255,0.85)' },
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.72)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     padding: 16,
     marginBottom: 16,
   },
   label: { color: colors.mutedText, fontWeight: '800', fontSize: 12 },
   value: { marginTop: 6, color: colors.text, fontWeight: '900', fontSize: 16 },
+  value2: { marginTop: 4, color: colors.text, fontWeight: '700', fontSize: 14 },
   hint: { marginTop: 10, color: colors.mutedText, lineHeight: 18 },
   spacer: { flex: 1, minHeight: 24 },
   btn: {},

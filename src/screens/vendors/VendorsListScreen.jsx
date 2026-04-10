@@ -32,7 +32,7 @@ export function VendorsListScreen({ navigation }) {
             >
               <View style={styles.row}>
                 <View style={styles.icon}>
-                  <MaterialCommunityIcons name="store" size={22} color="#fff" />
+                  <MaterialCommunityIcons name="store" size={22} color="#2f86de" />
                 </View>
                 <View style={styles.meta}>
                   <Text style={styles.name}>{item.name}</Text>
@@ -56,7 +56,7 @@ export function VendorsListScreen({ navigation }) {
             <GradientButton
               title="Add vendor"
               onPress={() => navigation.navigate('VendorForm', {})}
-              colors={['#7c3aed', '#a78bfa']}
+              colors={['#2f86de', '#62b6ff']}
               left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
             />
           </View>
@@ -73,8 +73,8 @@ const styles = StyleSheet.create({
   sub: { marginTop: 6, color: colors.mutedText },
   list: { padding: 16, paddingBottom: 120, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.outline,
@@ -84,21 +84,21 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(167,139,250,0.25)',
+    backgroundColor: 'rgba(98,182,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   meta: { flex: 1 },
   name: { color: colors.text, fontSize: 16, fontWeight: '900' },
   phone: { marginTop: 4, color: colors.mutedText, fontSize: 13 },
-  cat: { marginTop: 4, color: '#c4b5fd', fontSize: 12, fontWeight: '700' },
+  cat: { marginTop: 4, color: '#2f86de', fontSize: 12, fontWeight: '700' },
   empty: {
     alignItems: 'center',
     padding: 22,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },

@@ -6,8 +6,8 @@ const STORAGE_KEY = '@constructionERP/auth';
 const AuthContext = createContext(null);
 
 const ACCOUNTS = [
-  { id: 'adm-001', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin' },
-  { id: 'mgr-001', username: 'manager', password: 'manager123', name: 'Site Manager', role: 'manager' },
+  { id: 'adm-001', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin', age: '34', gender: 'Male', phone: '9000000001' },
+  { id: 'mgr-001', username: 'manager', password: 'manager123', name: 'Site Manager', role: 'manager', age: '31', gender: 'Male', phone: '9000000002' },
 ];
 
 export function AuthProvider({ children }) {
@@ -44,6 +44,9 @@ export function AuthProvider({ children }) {
       role: hit.role,
       username: hit.username,
       companyName: 'Srutika Constructions',
+      age: hit.age,
+      gender: hit.gender,
+      phone: hit.phone,
     };
     setUser(nextUser);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));

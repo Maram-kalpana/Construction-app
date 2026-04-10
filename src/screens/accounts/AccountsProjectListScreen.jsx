@@ -24,7 +24,7 @@ export function AccountsProjectListScreen({ navigation }) {
             <Pressable onPress={() => navigation.navigate('Accounts', { projectId: item.id })} style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.iconWrap}>
-                  <MaterialCommunityIcons name="bank" size={22} color="#fff" />
+                  <MaterialCommunityIcons name="bank" size={22} color="#2f86de" />
                 </View>
                 <View style={styles.meta}>
                   <Text style={styles.name}>{item.name}</Text>
@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18 },
   list: { padding: 16, paddingBottom: 28, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.outline,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(245,158,11,0.22)',
+    backgroundColor: 'rgba(98,182,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

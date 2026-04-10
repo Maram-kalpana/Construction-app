@@ -109,6 +109,7 @@ export function StockModuleScreen({ route }) {
               title="Save stock figures"
               onPress={() => persistStock({ openBal, received, cum, bal })}
               colors={['#2f86de', '#62b6ff']}
+              style={styles.primaryBtn}
               left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
             />
           </View>
@@ -192,6 +193,7 @@ const styles = StyleSheet.create({
   section: { color: colors.text, fontWeight: '900', marginBottom: 12 },
   grid2: { flexDirection: 'row', gap: 10 },
   halfWrap: { flex: 1, marginBottom: 0 },
+  primaryBtn: { marginTop: 6, width: '100%' },
   lineRow: {
     flexDirection: 'row',
     alignItems: 'center',
