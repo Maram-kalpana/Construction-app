@@ -16,6 +16,7 @@ import { SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -97,13 +98,6 @@ export function LabourFormScreen({ route, navigation }) {
     }
   };
 
-  const canSave = useMemo(() => {
-    const digits = phone.replace(/\D/g, '');
-    const p = digits.length >= 8;
-    const n = name.trim().length >= 2;
-    return p && n;
-  }, [phone, name]);
-
   const savePerson = async () => {
     const person = await upsertLabourPerson({
       id: labourId ?? undefined,
@@ -162,12 +156,10 @@ export function LabourFormScreen({ route, navigation }) {
               label="Phone number"
               value={phone}
               onChangeText={setPhone}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="phone-pad"
-              outlineStyle={styles.outline}
               style={[styles.input, styles.inputFlex]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <Pressable onPress={onLookup} style={styles.lookupBtn}>
               <Text style={styles.lookupText}>Find</Text>
@@ -196,22 +188,18 @@ export function LabourFormScreen({ route, navigation }) {
             label="Full name"
             value={name}
             onChangeText={setName}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <TextInput
             label="Age"
             value={age}
             onChangeText={setAge}
-            mode="outlined"
+            {...paperInputProps}
             keyboardType="numeric"
-            outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <Text style={styles.label}>Gender</Text>
           <SegmentedButtons
@@ -237,34 +225,28 @@ export function LabourFormScreen({ route, navigation }) {
             label="Masonry / party name"
             value={masteryName}
             onChangeText={setMasteryName}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <View style={styles.grid2}>
             <TextInput
               label="Mason"
               value={mason}
               onChangeText={setMason}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="numeric"
-              outlineStyle={styles.outline}
               style={[styles.input, styles.half]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <TextInput
               label="Male / skilled"
               value={maleSkilled}
               onChangeText={setMaleSkilled}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="numeric"
-              outlineStyle={styles.outline}
               style={[styles.input, styles.half]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
           </View>
           <View style={styles.grid2}>
@@ -272,36 +254,30 @@ export function LabourFormScreen({ route, navigation }) {
               label="Female / unskilled"
               value={femaleUnskilled}
               onChangeText={setFemaleUnskilled}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="numeric"
-              outlineStyle={styles.outline}
               style={[styles.input, styles.half]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
             <TextInput
               label="Others"
               value={others}
               onChangeText={setOthers}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="numeric"
-              outlineStyle={styles.outline}
               style={[styles.input, styles.half]}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
           </View>
           <TextInput
             label="Work done / measurements"
             value={workDone}
             onChangeText={setWorkDone}
-            mode="outlined"
+            {...paperInputProps}
             multiline
             numberOfLines={3}
-            outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
 
           <GradientButton
@@ -313,7 +289,6 @@ export function LabourFormScreen({ route, navigation }) {
               }
               await onSave();
             }}
-            disabled={!canSave}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
 
@@ -335,8 +310,7 @@ const styles = StyleSheet.create({
   label: { color: colors.text, fontWeight: '800', marginBottom: 8 },
   rowPhone: { flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 6 },
   inputFlex: { flex: 1 },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  input: { marginBottom: 12 },
   lookupBtn: {
     paddingHorizontal: 16,
     paddingVertical: 16,

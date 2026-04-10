@@ -5,6 +5,7 @@ import { SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/theme';
@@ -39,11 +40,9 @@ export function AddExpenseScreen({ route, navigation }) {
               label="Name / party name"
               value={name}
               onChangeText={setName}
-              mode="outlined"
-              outlineStyle={styles.outline}
+              {...paperInputProps}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
 
             <Text style={styles.label}>Type</Text>
@@ -69,12 +68,10 @@ export function AddExpenseScreen({ route, navigation }) {
               label="Amount"
               value={amount}
               onChangeText={setAmount}
-              mode="outlined"
+              {...paperInputProps}
               keyboardType="numeric"
-              outlineStyle={styles.outline}
               style={styles.input}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
               left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="currency-inr" size={18} color={colors.mutedText} />} />}
             />
 
@@ -82,13 +79,11 @@ export function AddExpenseScreen({ route, navigation }) {
               label="Description"
               value={description}
               onChangeText={setDescription}
-              mode="outlined"
-              outlineStyle={styles.outline}
+              {...paperInputProps}
               style={styles.input}
               multiline
               numberOfLines={4}
               textColor={colors.text}
-              theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
             />
 
             <GradientButton
@@ -128,8 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(11,18,19,0.78)',
     padding: 14,
   },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  input: { marginBottom: 12 },
   label: { color: colors.text, fontWeight: '800', marginBottom: 10, marginTop: 4 },
   segment: { marginBottom: 12 },
   btn: { marginTop: 4 },

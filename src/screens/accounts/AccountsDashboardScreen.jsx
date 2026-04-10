@@ -6,6 +6,7 @@ import { TextInput } from 'react-native-paper';
 import { GradientButton } from '../../components/GradientButton';
 import { GradientCard } from '../../components/GradientCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -81,12 +82,10 @@ export function AccountsDashboardScreen({ route, navigation }) {
             label="Total amount"
             value={draftTotal}
             onChangeText={setDraftTotal}
-            mode="outlined"
+            {...paperInputProps}
             keyboardType="numeric"
-            outlineStyle={styles.outline}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <GradientButton
             title="Save total amount"
@@ -124,6 +123,5 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: colors.text, fontWeight: '900', fontSize: 16 },
   sectionSub: { marginTop: 6, color: colors.mutedText, marginBottom: 12 },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  input: { marginBottom: 12 },
 });

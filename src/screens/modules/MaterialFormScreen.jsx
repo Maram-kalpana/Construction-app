@@ -5,6 +5,7 @@ import { TextInput } from 'react-native-paper';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { paperInputProps } from '../../components/paperInput';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -73,31 +74,25 @@ export function MaterialFormScreen({ route, navigation }) {
             label="Item name"
             value={itemName}
             onChangeText={setItemName}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <TextInput
             label="Qty / nos."
             value={qty}
             onChangeText={setQty}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <TextInput
             label="Supplier (optional)"
             value={supplier}
             onChangeText={setSupplier}
-            mode="outlined"
-            outlineStyle={styles.outline}
+            {...paperInputProps}
             style={styles.input}
             textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
           />
           <GradientButton
             title={editing ? 'Update' : 'Save'}
@@ -131,8 +126,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(125,211,252,0.3)',
   },
   pillText: { color: '#7dd3fc', fontWeight: '900', fontSize: 12 },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
-  outline: { borderRadius: 14 },
+  input: { marginBottom: 12 },
   del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, justifyContent: 'center' },
   delText: { color: '#fca5a5', fontWeight: '800' },
 });
