@@ -20,7 +20,7 @@ export function ProjectsListScreen({ navigation }) {
             <Pressable onPress={() => navigation.navigate('ProjectModules', { projectId: item.id })} style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.iconWrap}>
-                  <MaterialCommunityIcons name="office-building" size={22} color="#fff" />
+                  <MaterialCommunityIcons name="office-building" size={22} color="#1d78d8" />
                 </View>
                 <View style={styles.meta}>
                   <Text style={styles.name}>{item.name}</Text>
@@ -42,8 +42,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   list: { padding: 16, paddingBottom: 28, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.outline,
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(125,211,252,0.2)',
+    backgroundColor: 'rgba(45,127,218,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -65,9 +65,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: 'rgba(31,111,120,0.45)',
+    backgroundColor: 'rgba(76,193,123,0.18)',
     borderWidth: 1,
-    borderColor: colors.outline,
+    borderColor: 'rgba(35,138,74,0.22)',
   },
   statusText: { color: colors.text, fontWeight: '700', fontSize: 12 },
 });
