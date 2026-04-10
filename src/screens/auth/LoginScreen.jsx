@@ -19,16 +19,18 @@ import { colors } from '../../theme/theme';
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
-  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const disabled = useMemo(() => emailOrPhone.trim().length < 3 || password.length < 3, [emailOrPhone, password]);
+  const [error, setError] = useState('');
+  const disabled = useMemo(() => username.trim().length < 3 || password.length < 3, [username, password]);
 
   return (
     <View style={styles.root}>
       <ImageBackground
         source={require('../../../assets/construction1.jpg')}
         resizeMode="cover"
-        style={StyleSheet.absoluteFill}
+        style={styles.bg}
+        imageStyle={styles.bgImage}
       >
         <LinearGradient
           colors={['rgba(6,16,22,0.25)', 'rgba(6,16,22,0.88)', 'rgba(6,16,22,0.95)']}
@@ -40,12 +42,18 @@ export function LoginScreen() {
           style={styles.flex}
         >
           <ScrollView
-            contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: Math.max(insets.bottom, 16) + 24 }]}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingTop: Math.max(insets.top, 12) + 8,
+                paddingBottom: Math.max(insets.bottom, 16) + 24,
+              },
+            ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <View style={styles.brandBlock}>
+            <View style={styles.brandBlock} pointerEvents="none">
               <Text style={styles.kicker}>SRUTIKA CONSTRUCTIONS</Text>
               <Text style={styles.title}>Daily Progress</Text>
               <Text style={styles.subtitle}>Manager workspace — labour, materials & stock in one place.</Text>
@@ -53,36 +61,53 @@ export function LoginScreen() {
 
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Sign in</Text>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
               <TextInput
-                label="Email / Phone"
-                value={emailOrPhone}
-                onChangeText={setEmailOrPhone}
+                label="Username"
+                value={username}
+                onChangeText={(t) => {
+                  setUsername(t);
+                  if (error) setError('');
+                }}
                 mode="outlined"
                 autoCapitalize="none"
-                keyboardType="email-address"
                 outlineStyle={styles.outline}
                 style={styles.input}
                 textColor={colors.text}
-                theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
+                activeOutlineColor="#7dd3fc"
+                outlineColor="rgba(233,242,242,0.18)"
+                theme={{ roundness: 14, colors: { background: 'rgba(255,255,255,0.04)' } }}
               />
               <TextInput
                 label="Password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  if (error) setError('');
+                }}
                 mode="outlined"
                 secureTextEntry
                 outlineStyle={styles.outline}
                 style={styles.input}
                 textColor={colors.text}
-                theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
+                activeOutlineColor="#7dd3fc"
+                outlineColor="rgba(233,242,242,0.18)"
+                theme={{ roundness: 14, colors: { background: 'rgba(255,255,255,0.04)' } }}
               />
               <GradientButton
                 title="Continue"
-                onPress={() => login({ emailOrPhone, password })}
+                onPress={async () => {
+                  try {
+                    await login({ username, password });
+                  } catch {
+                    setError('Invalid username or password');
+                  }
+                }}
                 disabled={disabled}
                 colors={['#0ea5e9', '#0369a1']}
                 style={styles.btn}
               />
+              <Text style={styles.credHint}>Demo login: manager / manager123</Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -93,9 +118,11 @@ export function LoginScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#061016' },
+  bg: { flex: 1 },
+  bgImage: { transform: [{ scale: 1.08 }], opacity: 0.55 },
   flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 20, justifyContent: 'flex-end' },
-  brandBlock: { marginBottom: 22 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20, justifyContent: 'center' },
+  brandBlock: { marginBottom: 18 },
   kicker: { color: 'rgba(233,242,242,0.75)', fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
   title: { marginTop: 8, fontSize: 34, fontWeight: '900', color: '#fff', letterSpacing: 0.2 },
   subtitle: { marginTop: 10, fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.82)', maxWidth: 340 },
@@ -107,7 +134,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(125,211,252,0.22)',
   },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 14 },
-  input: { backgroundColor: 'transparent', marginBottom: 12 },
+  errorText: { color: '#fecaca', fontWeight: '800', marginBottom: 10 },
+  input: { marginBottom: 12 },
   outline: { borderRadius: 14 },
   btn: { marginTop: 6 },
+  credHint: { marginTop: 10, color: 'rgba(233,242,242,0.55)', fontSize: 12 },
 });

@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
 
 import { GradientCard } from '../../components/GradientCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -17,15 +16,8 @@ const modules = [
 
 export function ProjectModulesScreen({ route, navigation }) {
   const { projectId } = route.params;
-  const { projects, getDailyBundle, updateDailyPartial, dateKey } = useApp();
+  const { projects } = useApp();
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
-  const today = dateKey();
-  const bundle = getDailyBundle(projectId, today);
-  const h = bundle.dailyHeader || {};
-
-  const setHeaderField = (field, value) => {
-    void updateDailyPartial(projectId, { dailyHeader: { ...h, [field]: value } }, today);
-  };
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -34,52 +26,19 @@ export function ProjectModulesScreen({ route, navigation }) {
         <Text style={styles.sub}>{project?.location ?? ''}</Text>
 
         <View style={styles.headerCard}>
-          <Text style={styles.sectionLabel}>Daily report header</Text>
-          <TextInput
-            label="Firm / company"
-            value={h.firm ?? ''}
-            onChangeText={(t) => setHeaderField('firm', t)}
-            mode="outlined"
-            dense
-            outlineStyle={styles.outline}
-            style={styles.input}
-            textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
-          />
-          <TextInput
-            label="Site"
-            value={h.site ?? ''}
-            onChangeText={(t) => setHeaderField('site', t)}
-            mode="outlined"
-            dense
-            outlineStyle={styles.outline}
-            style={styles.input}
-            textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
-          />
-          <TextInput
-            label="Work done (summary)"
-            value={h.workDone ?? ''}
-            onChangeText={(t) => setHeaderField('workDone', t)}
-            mode="outlined"
-            dense
-            outlineStyle={styles.outline}
-            style={styles.input}
-            textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
-          />
-          <TextInput
-            label="Reference no."
-            value={h.referenceNo ?? ''}
-            onChangeText={(t) => setHeaderField('referenceNo', t)}
-            mode="outlined"
-            dense
-            outlineStyle={styles.outline}
-            style={styles.input}
-            textColor={colors.text}
-            theme={{ colors: { primary: '#7dd3fc', outline: colors.outline, background: 'transparent' } }}
-          />
-          <Text style={styles.dateHint}>Reporting date: {today}</Text>
+          <Text style={styles.sectionLabel}>Project details</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Project ID</Text>
+            <Text style={styles.detailValue}>{projectId}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Status</Text>
+            <Text style={styles.detailValue}>{project?.status ?? '—'}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Location</Text>
+            <Text style={styles.detailValue}>{project?.location ?? '—'}</Text>
+          </View>
         </View>
 
         <Text style={styles.modulesTitle}>Modules</Text>
@@ -115,9 +74,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   sectionLabel: { color: colors.text, fontWeight: '900', marginBottom: 10 },
-  input: { backgroundColor: 'transparent', marginBottom: 8 },
-  outline: { borderRadius: 12 },
-  dateHint: { marginTop: 4, color: colors.mutedText, fontSize: 12 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
+  detailLabel: { color: colors.mutedText, fontWeight: '800' },
+  detailValue: { color: colors.text, fontWeight: '900', textAlign: 'right', flexShrink: 1 },
   modulesTitle: { color: colors.text, fontWeight: '900', fontSize: 16, marginBottom: 10 },
   modPress: { marginBottom: 12 },
   modCard: { width: '100%' },

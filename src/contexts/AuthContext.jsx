@@ -5,6 +5,11 @@ const STORAGE_KEY = '@constructionERP/auth';
 
 const AuthContext = createContext(null);
 
+const ACCOUNTS = [
+  { id: 'adm-001', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin' },
+  { id: 'mgr-001', username: 'manager', password: 'manager123', name: 'Site Manager', role: 'manager' },
+];
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isRestoring, setIsRestoring] = useState(true);
@@ -26,12 +31,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (params) => {
-    const nextUser = {
-      id: 'mgr-001',
-      name: 'Site Manager',
-      role: 'manager',
-      emailOrPhone: params.emailOrPhone.trim(),
-    };
+    const username = String(params.username || '').trim().toLowerCase();
+    const password = String(params.password || '');
+
+    const hit = ACCOUNTS.find((a) => a.username === username && a.password === password) || null;
+    if (!hit) throw new Error('INVALID_CREDENTIALS');
+
+    const nextUser = { id: hit.id, name: hit.name, role: hit.role, username: hit.username };
     setUser(nextUser);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
   }, []);
