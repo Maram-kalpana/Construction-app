@@ -1,12 +1,21 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { colors } from '../../theme/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function HomeDashboardScreen({ navigation }) {
-  const dateItems = ['01\nM', '02\nT', '03\nW', '04\nT', '05\nF', '06\nS'];
+  const { user } = useAuth();
+  const dateItems = [
+    { id: 'd-01', label: '01\nM' },
+    { id: 'd-02', label: '02\nT' },
+    { id: 'd-03', label: '03\nW' },
+    { id: 'd-04', label: '04\nT' },
+    { id: 'd-05', label: '05\nF' },
+    { id: 'd-06', label: '06\nS' },
+  ];
   const tasks = [
     {
       id: 't1',
@@ -34,6 +43,9 @@ export function HomeDashboardScreen({ navigation }) {
     },
   ];
 
+  const greetingName = user?.name || 'Manager';
+  const companyName = user?.companyName || 'Srutika Constructions';
+
   return (
     <ScreenContainer edges={['top', 'left', 'right']} style={styles.noPad}>
       <View style={styles.root}>
@@ -46,11 +58,9 @@ export function HomeDashboardScreen({ navigation }) {
 
             <View style={styles.titleRow}>
               <View>
-                <Text style={styles.h1}>My Task</Text>
+                <Text style={styles.h1}>Hello, {greetingName}</Text>
+                <Text style={styles.company}>{companyName}</Text>
                 <Text style={styles.sub}>Today</Text>
-              </View>
-              <View style={styles.profileWrap}>
-                <MaterialCommunityIcons name="account" size={18} color="#1d5fa8" />
               </View>
             </View>
 
@@ -58,14 +68,20 @@ export function HomeDashboardScreen({ navigation }) {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
               {dateItems.map((d, i) => (
-                <View key={d} style={[styles.datePill, i === 0 && styles.datePillActive]}>
-                  <Text style={[styles.dateText, i === 0 && styles.dateTextActive]}>{d}</Text>
+                <View key={d.id} style={[styles.datePill, i === 0 && styles.datePillActive]}>
+                  <Text style={[styles.dateText, i === 0 && styles.dateTextActive]}>{d.label}</Text>
                 </View>
               ))}
             </ScrollView>
           </View>
 
-          <View style={styles.cutCorner} />
+          <Svg pointerEvents="none" width="100%" height={120} style={styles.headerWave}>
+            <Path
+              d="M0,10 C120,18 180,16 230,26 C286,39 306,62 326,88 C342,108 360,114 390,114 L390,120 L0,120 Z"
+              fill="#4A90E2"
+            />
+          </Svg>
+          <View style={styles.cutoutBite} />
           <Pressable style={styles.plusFab}>
             <MaterialCommunityIcons name="plus" size={24} color="#fff" />
           </Pressable>
@@ -75,6 +91,7 @@ export function HomeDashboardScreen({ navigation }) {
           <View style={styles.verticalTrack} />
           {tasks.map((t) => (
             <Pressable key={t.id} onPress={t.onPress} style={styles.taskCard}>
+              <View style={styles.leftAccent} />
               <View style={styles.taskIcon}>
                 <MaterialCommunityIcons name={t.icon} size={20} color="#4A90E2" />
               </View>
@@ -118,15 +135,8 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   h1: { fontSize: 36, fontWeight: '900', color: '#1f2e49' },
+  company: { marginTop: 4, color: '#4A90E2', fontWeight: '700', fontSize: 13 },
   sub: { marginTop: 4, color: '#7f8ba3', fontWeight: '700', fontSize: 16 },
-  profileWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#e3f2ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   dayHint: { marginTop: 8, color: '#9db2cb', fontSize: 12, textAlign: 'right' },
   dateRow: { marginTop: 10, gap: 8, paddingRight: 8 },
   datePill: {
@@ -142,19 +152,24 @@ const styles = StyleSheet.create({
   datePillActive: { backgroundColor: '#4A90E2', borderColor: '#4A90E2' },
   dateText: { color: '#7a8aa3', fontWeight: '800', textAlign: 'center', fontSize: 12 },
   dateTextActive: { color: '#fff' },
-  cutCorner: {
+  headerWave: {
+    position: 'absolute',
+    right: 0,
+    bottom: -2,
+  },
+  cutoutBite: {
     position: 'absolute',
     right: 16,
-    bottom: -38,
-    width: 122,
-    height: 98,
-    backgroundColor: '#4A90E2',
-    borderTopLeftRadius: 64,
+    bottom: -18,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: '#ffffff',
   },
   plusFab: {
     position: 'absolute',
-    right: 24,
-    bottom: -22,
+    right: 29,
+    bottom: -13,
     width: 48,
     height: 48,
     borderRadius: 16,
@@ -187,6 +202,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
+  },
+  leftAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 16,
+    bottom: 16,
+    width: 6,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
+    backgroundColor: '#4A90E2',
   },
   taskIcon: {
     width: 44,
