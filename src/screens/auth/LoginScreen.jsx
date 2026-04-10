@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppTextField } from '../../components/AppTextField';
@@ -63,7 +64,14 @@ export function LoginScreen() {
     <View style={styles.root}>
       <View style={styles.lightHalf} />
       <View style={styles.darkHalf} />
-      <Animated.View style={[styles.waveCut, { top: curveTop }]} />
+      <Animated.View style={[styles.waveWrap, { top: curveTop }]}>
+        <Svg width="100%" height={170}>
+          <Path
+            d="M0,70 C70,42 140,50 205,72 C256,88 308,90 380,54 L380,170 L0,170 Z"
+            fill={C.bgDark}
+          />
+        </Svg>
+      </Animated.View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
@@ -78,6 +86,7 @@ export function LoginScreen() {
 
         <View style={styles.glassWrap}>
           <Animated.View style={[styles.liquid, { height: liquidHeight }]} />
+          <View style={styles.waveBubble} />
           <View style={styles.glassShade} />
           <View style={styles.formArea}>
             <AppTextField
@@ -93,7 +102,8 @@ export function LoginScreen() {
               textColor={C.textDark}
               placeholderColor="rgba(209,213,228,0.62)"
               borderColor="rgba(255,255,255,0.22)"
-              backgroundColor="rgba(255,255,255,0.10)"
+                backgroundColor="rgba(255,255,255,0.08)"
+                inputStyle={styles.insetInput}
             />
             <AppTextField
               label="Password"
@@ -108,7 +118,8 @@ export function LoginScreen() {
               textColor={C.textDark}
               placeholderColor="rgba(209,213,228,0.62)"
               borderColor="rgba(255,255,255,0.22)"
-              backgroundColor="rgba(255,255,255,0.10)"
+                backgroundColor="rgba(255,255,255,0.08)"
+                inputStyle={styles.insetInput}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
@@ -175,12 +186,14 @@ const styles = StyleSheet.create({
   },
   waveCut: {
     position: 'absolute',
-    left: -30,
-    right: -30,
-    height: 160,
-    backgroundColor: C.bgDark,
-    borderTopLeftRadius: 140,
-    borderTopRightRadius: 140,
+    left: 0,
+    right: 0,
+  },
+  waveWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 170,
   },
   topBar: {
     paddingHorizontal: 22,
@@ -209,14 +222,13 @@ const styles = StyleSheet.create({
     height: 330,
     borderRadius: 44,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
+    borderWidth: 0,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    shadowColor: '#BEC7D8',
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    shadowOffset: { width: 10, height: 10 },
+    elevation: 10,
   },
   liquid: {
     position: 'absolute',
@@ -227,9 +239,18 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
+  waveBubble: {
+    position: 'absolute',
+    left: -14,
+    right: -14,
+    bottom: 148,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(26,106,254,0.9)',
+  },
   glassShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.20)',
   },
   formArea: {
     paddingTop: 24,
@@ -305,5 +326,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.32)',
+  },
+  insetInput: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.26,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
 });

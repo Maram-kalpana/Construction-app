@@ -38,7 +38,13 @@ export function AuthProvider({ children }) {
     const hit = ACCOUNTS.find((a) => a.username === username && a.password === password) || null;
     if (!hit) throw new Error('INVALID_CREDENTIALS');
 
-    const nextUser = { id: hit.id, name: hit.name, role: hit.role, username: hit.username };
+    const nextUser = {
+      id: hit.id,
+      name: hit.name,
+      role: hit.role,
+      username: hit.username,
+      companyName: 'Srutika Constructions',
+    };
     setUser(nextUser);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
   }, []);
