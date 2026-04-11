@@ -6,7 +6,7 @@ import { AccountsProjectListScreen } from '../../screens/accounts/AccountsProjec
 import { AddExpenseScreen } from '../../screens/accounts/AddExpenseScreen';
 import { ExpenseDetailsScreen } from '../../screens/accounts/ExpenseDetailsScreen';
 import { ExpenseListScreen } from '../../screens/accounts/ExpenseListScreen';
-import { HomeDashboardScreen } from '../../screens/home/HomeDashboardScreen';
+import  HomeDashboardScreen  from '../../screens/home/HomeDashboardScreen';
 import { LabourFormScreen } from '../../screens/modules/LabourFormScreen';
 import { LabourListScreen } from '../../screens/modules/LabourListScreen';
 import { LabourModuleScreen } from '../../screens/modules/LabourModuleScreen';

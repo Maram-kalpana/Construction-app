@@ -1,255 +1,206 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageBackground } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenContainer } from '../../components/ScreenContainer';
-
-export function HomeDashboardScreen({ navigation }) {
-  const dateItems = [
-    { id: 'd-01', label: '01\nM' },
-    { id: 'd-02', label: '02\nT' },
-    { id: 'd-03', label: '03\nW' },
-    { id: 'd-04', label: '04\nT' },
-    { id: 'd-05', label: '05\nF' },
-    { id: 'd-06', label: '06\nS' },
-  ];
+export default function HomeDashboardScreen({ navigation }) {
   const tasks = [
     {
-      id: 't1',
+      id: '1',
       title: 'Projects',
       sub: 'Open assigned project list',
       time: '10:00 AM',
       icon: 'office-building-outline',
-      onPress: () => navigation.navigate('ProjectsList'),
+      onPress: () => navigation?.navigate?.('ProjectsList'),
     },
     {
-      id: 't2',
+      id: '2',
       title: 'Vendors',
       sub: 'View supplier records',
       time: '11:00 AM',
       icon: 'truck-delivery-outline',
-      onPress: () => navigation.navigate('VendorsList'),
+      onPress: () => navigation?.navigate?.('VendorsList'),
     },
     {
-      id: 't3',
+      id: '3',
       title: 'Accounts',
       sub: 'Check allocated balances',
       time: '01:30 PM',
       icon: 'bank-outline',
-      onPress: () => navigation.navigate('AccountsProjectList'),
+      onPress: () => navigation?.navigate?.('AccountsProjectList'),
     },
   ];
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} style={styles.noPad}>
-      <View style={styles.root}>
-        <View style={styles.headerShell}>
-          <View style={styles.headerMain}>
-            <View style={styles.topRow}>
-              <MaterialCommunityIcons name="menu" size={22} color="#3f4a62" />
-              <MaterialCommunityIcons name="bell-badge-outline" size={20} color="#4A90E2" />
+    <SafeAreaView style={styles.root} edges={['top']}>
+
+      {/* ── HERO HEADER ── */}
+      <ImageBackground
+        source={require('../../../assets/construction1.jpg')}
+        style={styles.hero}
+        resizeMode="cover"
+      >
+        <View style={styles.heroOverlay} />
+
+        <View style={styles.heroBody}>
+          <Text style={styles.heroTitle}>My Tasks</Text>
+          <Text style={styles.heroSub}>📍 Monday, 1 June</Text>
+        </View>
+
+        <View style={styles.heroWave} />
+      </ImageBackground>
+
+      {/* ── SCROLLABLE BODY ── */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {tasks.map((item) => (
+          <Pressable key={item.id} style={styles.card} onPress={item.onPress}>
+            <View style={styles.leftBar} />
+            <View style={styles.iconBox}>
+              <MaterialCommunityIcons name={item.icon} size={24} color="#4A90E2" />
             </View>
-
-            <View style={styles.titleRow}>
-              <View>
-                <Text style={styles.h1}>My Task</Text>
-                <Text style={styles.sub}>Today</Text>
-              </View>
-              <View style={styles.profileWrap}>
-                <MaterialCommunityIcons name="account" size={18} color="#1d5fa8" />
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardSub}>{item.sub}</Text>
             </View>
-
-            <Text style={styles.dayHint}>Monday, 1 June</Text>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
-              {dateItems.map((d, i) => (
-                <View key={d.id} style={[styles.datePill, i === 0 && styles.datePillActive]}>
-                  <Text style={[styles.dateText, i === 0 && styles.dateTextActive]}>{d.label}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-
-          <Svg pointerEvents="none" width="100%" height={120} style={styles.headerWave}>
-            <Path
-              d="M0,10 C120,18 180,16 230,26 C286,39 306,62 326,88 C342,108 360,114 390,114 L390,120 L0,120 Z"
-              fill="#4A90E2"
-            />
-          </Svg>
-          <View style={styles.cutoutBite} />
-          <Pressable style={styles.plusFab}>
-            <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+            <View style={styles.timeBadge}>
+              <MaterialCommunityIcons name="clock-outline" size={11} color="#aaa" />
+              <Text style={styles.timeText}> {item.time}</Text>
+            </View>
           </Pressable>
-        </View>
+        ))}
+      </ScrollView>
 
-        <View style={styles.listArea}>
-          <View style={styles.verticalTrack} />
-          {tasks.map((t) => (
-            <Pressable key={t.id} onPress={t.onPress} style={styles.taskCard}>
-              <View style={styles.leftAccent} />
-              <View style={styles.taskIcon}>
-                <MaterialCommunityIcons name={t.icon} size={20} color="#4A90E2" />
-              </View>
-              <View style={styles.taskMeta}>
-                <Text style={styles.taskTitle}>{t.title}</Text>
-                <Text style={styles.taskSub}>{t.sub}</Text>
-              </View>
-              <View style={styles.timePill}>
-                <Text style={styles.timeText}>{t.time}</Text>
-              </View>
-            </Pressable>
-          ))}
-
-          <View style={styles.bottomNav}>
-            <MaterialCommunityIcons name="home" size={18} color="#dfeeff" />
-            <Pressable style={styles.dropBtn}>
-              <MaterialCommunityIcons name="water" size={20} color="#4A90E2" />
-            </Pressable>
-            <MaterialCommunityIcons name="clock-outline" size={18} color="#dfeeff" />
-          </View>
-        </View>
-      </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  noPad: { paddingTop: 0 },
-  root: { flex: 1, backgroundColor: '#4A90E2' },
-  headerShell: { paddingTop: 18, backgroundColor: '#4A90E2' },
-  headerMain: {
-    marginHorizontal: 16,
+  root: {
+    flex: 1,
+    backgroundColor: '#f4f7fb',
+  },
+
+  // ── HERO ──
+  hero: {
+    width: '100%',
+    height: 240,
+    justifyContent: 'flex-end',
+  },
+
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20,40,80,0.45)',
+  },
+
+  heroBody: {
+    paddingHorizontal: 22,
+    paddingBottom: 55,
+  },
+
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+
+  heroSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
+  },
+
+  heroWave: {
+    position: 'absolute',
+    bottom: -1,
+    width: '100%',
+    height: 40,
+    backgroundColor: '#f4f7fb',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+
+  // ── SCROLL ──
+  scroll: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 30,
+  },
+
+  // ── CARDS ──
+  card: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 34,
-    borderTopRightRadius: 34,
-    borderBottomLeftRadius: 26,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  titleRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  h1: { fontSize: 36, fontWeight: '900', color: '#1f2e49' },
-  sub: { marginTop: 4, color: '#7f8ba3', fontWeight: '700', fontSize: 16 },
-  profileWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#e3f2ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayHint: { marginTop: 8, color: '#9db2cb', fontSize: 12, textAlign: 'right' },
-  dateRow: { marginTop: 10, gap: 8, paddingRight: 8 },
-  datePill: {
-    width: 44,
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#dbe8f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  datePillActive: { backgroundColor: '#4A90E2', borderColor: '#4A90E2' },
-  dateText: { color: '#7a8aa3', fontWeight: '800', textAlign: 'center', fontSize: 12 },
-  dateTextActive: { color: '#fff' },
-  headerWave: {
-    position: 'absolute',
-    right: 0,
-    bottom: -2,
-  },
-  cutoutBite: {
-    position: 'absolute',
-    right: 16,
-    bottom: -18,
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: '#ffffff',
-  },
-  plusFab: {
-    position: 'absolute',
-    right: 29,
-    bottom: -13,
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#4A90E2',
-    borderWidth: 4,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-  },
-  listArea: { flex: 1, paddingTop: 32, paddingHorizontal: 16 },
-  verticalTrack: {
-    position: 'absolute',
-    left: 24,
-    top: 56,
-    bottom: 120,
-    width: 2,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  taskCard: {
-    marginBottom: 14,
-    marginLeft: 8,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#1f4f8d',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    marginBottom: 14,
+    overflow: 'hidden',
+
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.08)' }
+      : {
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 3,
+        }),
   },
-  leftAccent: {
+
+  leftBar: {
     position: 'absolute',
     left: 0,
-    top: 16,
-    bottom: 16,
-    width: 6,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
+    top: 14,
+    bottom: 14,
+    width: 4,
     backgroundColor: '#4A90E2',
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
-  taskIcon: {
-    width: 44,
-    height: 44,
+
+  iconBox: {
+    width: 50,
+    height: 50,
     borderRadius: 14,
-    backgroundColor: '#e9f4ff',
+    backgroundColor: '#eaf4ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
-  taskMeta: { flex: 1 },
-  taskTitle: { color: '#1f2f4b', fontSize: 18, fontWeight: '800' },
-  taskSub: { marginTop: 4, color: '#7e8ea8', fontSize: 13 },
-  timePill: { backgroundColor: '#1f232c', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  timeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  bottomNav: {
-    marginTop: 'auto',
-    marginBottom: 10,
+
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1f2f4b',
+  },
+
+  cardSub: {
+    fontSize: 12,
+    color: '#8a99b5',
+    marginTop: 3,
+  },
+
+  timeBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 34,
+    backgroundColor: '#f0f4fa',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
-  dropBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#1f4f8d',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+
+  timeText: {
+    color: '#7a8aa8',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

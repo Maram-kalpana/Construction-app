@@ -50,18 +50,33 @@ export function LabourFormScreen({ route, navigation }) {
   }, [routeLabourId, labourPersonById]);
 
   const pickImage = async (useCamera) => {
-    const perm = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert('Permission needed', useCamera ? 'Camera access is required.' : 'Photo library access is required.');
-      return;
-    }
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
-    if (!result.canceled && result.assets?.[0]?.uri) setPhotoUri(result.assets[0].uri);
-  };
+  const perm = useCamera
+    ? await ImagePicker.requestCameraPermissionsAsync()
+    : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!perm.granted) {
+    Alert.alert('Permission needed', useCamera ? 'Camera access is required.' : 'Photo library access is required.');
+    return;
+  }
+
+  const result = useCamera
+    ? await ImagePicker.launchCameraAsync({
+        mediaTypes: [ImagePicker.MediaType.image],  // ✅ add this
+        quality: 0.7,
+        allowsEditing: true,
+        aspect: [1, 1],
+      })
+    : await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: [ImagePicker.MediaType.image],  // ✅ add this
+        quality: 0.7,
+        allowsEditing: true,
+        aspect: [1, 1],
+      });
+
+  if (!result.canceled && result.assets?.[0]?.uri) {
+    setPhotoUri(result.assets[0].uri);
+  }
+};
 
   const onLookup = () => {
     const found = findLabourByPhone(phone);
