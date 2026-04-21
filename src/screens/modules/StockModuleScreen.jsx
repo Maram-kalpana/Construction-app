@@ -1,10 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppTextField } from '../../components/AppTextField';
+import { DatePickerField } from '../../components/DatePickerField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -15,10 +17,12 @@ export function StockModuleScreen({ route }) {
     updateDailyPartial,
     addCementConsumption,
     deleteCementConsumption,
+    stockWorkOptions,
     dateKey,
   } = useApp();
   const today = dateKey();
-  const bundle = getDailyBundle(projectId, today);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const bundle = getDailyBundle(projectId, selectedDate);
   const stock = bundle.cementStock || {};
   const lines = bundle.cementConsumption || [];
   const remarks = bundle.remarks ?? '';
@@ -31,6 +35,7 @@ export function StockModuleScreen({ route }) {
 
   const [work, setWork] = useState('');
   const [qty, setQty] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     setOpenBal(stock.openBal ?? '');
@@ -40,14 +45,23 @@ export function StockModuleScreen({ route }) {
     setRemarksLocal(bundle.remarks ?? '');
   }, [stock.openBal, stock.received, stock.cum, stock.bal, bundle.remarks]);
 
+  const workOptions = useMemo(
+    () => stockWorkOptions(projectId).filter((w) => w.toLowerCase().includes(work.toLowerCase())).slice(0, 6),
+    [projectId, stockWorkOptions, work],
+  );
+  const visibleLines = useMemo(
+    () => lines.filter((line) => !search.trim() || (line.work || '').toLowerCase().includes(search.toLowerCase())),
+    [lines, search],
+  );
+
   const persistStock = async (next) => {
-    const b = getDailyBundle(projectId, today);
-    await updateDailyPartial(projectId, { cementStock: { ...b.cementStock, ...next } }, today);
+    const b = getDailyBundle(projectId, selectedDate);
+    await updateDailyPartial(projectId, { cementStock: { ...b.cementStock, ...next } }, selectedDate);
   };
 
   const persistRemarks = async (text) => {
     setRemarksLocal(text);
-    await updateDailyPartial(projectId, { remarks: text }, today);
+    await updateDailyPartial(projectId, { remarks: text }, selectedDate);
   };
 
   const onAddLine = async () => {
@@ -55,7 +69,7 @@ export function StockModuleScreen({ route }) {
       Alert.alert('Missing', 'Describe the work using cement.');
       return;
     }
-    await addCementConsumption(projectId, { work, qty }, today);
+    await addCementConsumption(projectId, { work, qty }, selectedDate);
     setWork('');
     setQty('');
   };
@@ -66,6 +80,17 @@ export function StockModuleScreen({ route }) {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.h1}>Cement & stock</Text>
           <Text style={styles.sub}>Consumption by work, opening balance, receipts, and closing balance.</Text>
+          <DatePickerField label="Date" value={selectedDate} onChange={setSelectedDate} style={{ marginBottom: 10 }} />
+          <View style={styles.searchWrap}>
+            <MaterialCommunityIcons name="magnify" size={20} color={colors.mutedText} />
+            <TextInput
+              style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search consumption work..."
+              placeholderTextColor={colors.mutedText}
+            />
+          </View>
 
           <View style={styles.card}>
             <Text style={styles.section}>Cement stock report</Text>
@@ -117,7 +142,7 @@ export function StockModuleScreen({ route }) {
           <View style={styles.card}>
             <Text style={styles.section}>Cement consumption</Text>
             <FlatList
-              data={lines}
+              data={visibleLines}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               renderItem={({ item }) => (
@@ -130,7 +155,7 @@ export function StockModuleScreen({ route }) {
                     onPress={() => {
                       Alert.alert('Delete line?', undefined, [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Delete', style: 'destructive', onPress: () => deleteCementConsumption(projectId, item.id, today) },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteCementConsumption(projectId, item.id, selectedDate) },
                       ]);
                     }}
                   >
@@ -140,11 +165,17 @@ export function StockModuleScreen({ route }) {
               )}
               ListEmptyComponent={<Text style={styles.empty}>No consumption lines yet.</Text>}
             />
-            <AppTextField
+            <SelectField
               label="Work"
-              value={work}
-              onChangeText={setWork}
+              value={work || null}
+              onChange={(v) => setWork(v || '')}
               placeholder="e.g. PCC work / brick work"
+              options={[
+                { label: 'Select work', value: null },
+                { label: 'PCC work - ground floor slab', value: 'PCC work - ground floor slab' },
+                { label: 'Brick work - 2nd floor walls', value: 'Brick work - 2nd floor walls' },
+                ...workOptions.map((name) => ({ label: name, value: name })),
+              ]}
             />
             <AppTextField
               label="Qty (bags)"
@@ -182,6 +213,18 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 40 },
   h1: { color: colors.text, fontSize: 22, fontWeight: '900' },
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18, marginBottom: 14 },
+  searchWrap: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: { flex: 1, color: colors.text, paddingVertical: 10 },
   card: {
     borderRadius: 22,
     borderWidth: 1,
@@ -204,5 +247,15 @@ const styles = StyleSheet.create({
   },
   lineWork: { color: colors.text, fontWeight: '800' },
   lineQty: { marginTop: 4, color: colors.mutedText, fontSize: 12 },
+  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -4, marginBottom: 10 },
+  optionChip: {
+    backgroundColor: '#dbeafe',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  optionText: { color: '#1e3a5f', fontWeight: '700', fontSize: 12 },
   empty: { color: colors.mutedText, marginBottom: 10 },
 });

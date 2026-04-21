@@ -5,13 +5,14 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
 export function MaterialFormScreen({ route, navigation }) {
   const { projectId, entryId, direction: dirParam } = route.params;
   const direction = dirParam === 'out' ? 'out' : 'in';
-  const { getDailyBundle, addMaterialEntry, deleteMaterialEntry, dateKey } = useApp();
+  const { getDailyBundle, addMaterialEntry, deleteMaterialEntry, materialItemOptions, vendors, dateKey } = useApp();
   const today = dateKey();
   const bundle = getDailyBundle(projectId, today);
   const list = direction === 'out' ? bundle.materialsOut : bundle.materialsIn;
@@ -20,13 +21,20 @@ export function MaterialFormScreen({ route, navigation }) {
   const [itemName, setItemName] = useState('');
   const [qty, setQty] = useState('');
   const [supplier, setSupplier] = useState('');
+  const [vendorId, setVendorId] = useState(null);
 
   useEffect(() => {
     if (!editing) return;
     setItemName(editing.itemName ?? '');
     setQty(String(editing.qty ?? ''));
     setSupplier(editing.supplier ?? '');
+    setVendorId(editing.vendorId ?? null);
   }, [editing]);
+
+  const itemOptions = useMemo(
+    () => materialItemOptions(projectId).filter((name) => name.toLowerCase().includes(itemName.toLowerCase())).slice(0, 6),
+    [itemName, materialItemOptions, projectId],
+  );
 
   const onSave = async () => {
     if (itemName.trim().length < 2) {
@@ -41,6 +49,7 @@ export function MaterialFormScreen({ route, navigation }) {
         itemName,
         qty,
         supplier,
+        vendorId,
       },
       today,
     );
@@ -69,11 +78,19 @@ export function MaterialFormScreen({ route, navigation }) {
           <View style={styles.pill}>
             <Text style={styles.pillText}>{direction === 'out' ? 'Outgoing / used' : 'Incoming delivery'}</Text>
           </View>
-          <AppTextField
+          <SelectField
             label="Item name"
-            value={itemName}
-            onChangeText={setItemName}
+            value={itemName || null}
+            onChange={(v) => setItemName(v || '')}
             placeholder="e.g. Cement / Sand / Bricks"
+            options={[
+              { label: 'Select item', value: null },
+              { label: 'Cement (OPC 53)', value: 'Cement (OPC 53)' },
+              { label: 'River Sand', value: 'River Sand' },
+              { label: 'Bricks', value: 'Bricks' },
+              { label: 'Steel', value: 'Steel' },
+              ...itemOptions.map((name) => ({ label: name, value: name })),
+            ]}
           />
           <AppTextField
             label="Qty / nos."
@@ -81,11 +98,19 @@ export function MaterialFormScreen({ route, navigation }) {
             onChangeText={setQty}
             placeholder="0"
           />
-          <AppTextField
-            label="Supplier (optional)"
-            value={supplier}
-            onChangeText={setSupplier}
-            placeholder="Optional"
+          <AppTextField label="Supplier (optional)" value={supplier} onChangeText={setSupplier} placeholder="Optional" />
+          <SelectField
+            label="Vendor"
+            value={vendorId}
+            onChange={setVendorId}
+            placeholder="Select vendor"
+            options={[
+              { label: 'Select vendor', value: null },
+              { label: 'Ravi Hire', value: 'ven_demo_1' },
+              { label: 'ACC Dealer', value: 'ven_demo_2' },
+              { label: 'Sri Ganesh', value: 'ven_demo_3' },
+              ...vendors.map((v) => ({ label: v.name, value: v.id })),
+            ]}
           />
           <GradientButton
             title={editing ? 'Update' : 'Save'}
@@ -119,6 +144,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(45,127,218,0.22)',
   },
   pillText: { color: '#1d78d8', fontWeight: '900', fontSize: 12 },
+  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -4, marginBottom: 10 },
+  optionChip: {
+    backgroundColor: '#dbeafe',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  optionText: { color: '#1e3a5f', fontWeight: '700', fontSize: 12 },
   del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, justifyContent: 'center' },
   delText: { color: '#fca5a5', fontWeight: '800' },
 });

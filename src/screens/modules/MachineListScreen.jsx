@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -11,14 +12,41 @@ export function MachineListScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { getDailyBundle, dateKey } = useApp();
   const today = dateKey();
-  const rows = useMemo(() => getDailyBundle(projectId, today).machines, [getDailyBundle, projectId, today]);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [search, setSearch] = useState('');
+  const rows = useMemo(() => {
+    const all = getDailyBundle(projectId, selectedDate).machines;
+    if (!search.trim()) return all;
+    const q = search.toLowerCase();
+    return all.filter((m) => (m.partyName || '').toLowerCase().includes(q) || (m.workDone || '').toLowerCase().includes(q));
+  }, [getDailyBundle, projectId, selectedDate, search]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <View style={styles.wrap}>
         <View style={styles.header}>
           <Text style={styles.h1}>Machinery</Text>
-          <Text style={styles.sub}>Party name, start / close time, total hours, work done (measurements).</Text>
+          <Text style={styles.sub}>Party / equipment, start / close time, total hours.</Text>
+        </View>
+        <View style={styles.searchWrap}>
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.mutedText} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search party / equipment..."
+            placeholderTextColor={colors.mutedText}
+          />
+        </View>
+        <View style={styles.dateRow}>
+          <DatePickerField label="" value={selectedDate} onChange={setSelectedDate} style={styles.dateBtnWrap} />
+          <GradientButton
+            title="Add Machine"
+            onPress={() => navigation.navigate('MachineForm', { projectId })}
+            colors={['#2f86de', '#62b6ff']}
+            style={styles.addBtn}
+            left={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#fff" />}
+          />
         </View>
         <FlatList
           data={rows}
@@ -49,14 +77,6 @@ export function MachineListScreen({ route, navigation }) {
             </View>
           }
         />
-        <View style={styles.footer}>
-          <GradientButton
-            title="Add machine shift"
-            onPress={() => navigation.navigate('MachineForm', { projectId })}
-            colors={['#2f86de', '#62b6ff']}
-            left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
-          />
-        </View>
       </View>
     </ScreenContainer>
   );
@@ -67,6 +87,23 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   h1: { color: colors.text, fontSize: 22, fontWeight: '900' },
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18 },
+  searchWrap: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: { flex: 1, color: colors.text, paddingVertical: 10 },
+  dateRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 8 },
+  dateBtnWrap: { flex: 1 },
+  addBtn: { flex: 1 },
   list: { padding: 16, paddingBottom: 120, gap: 12 },
   card: {
     backgroundColor: 'rgba(255,255,255,0.94)',
@@ -98,5 +135,4 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },
-  footer: { position: 'absolute', left: 16, right: 16, bottom: 16 },
 });

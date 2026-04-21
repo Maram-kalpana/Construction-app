@@ -6,6 +6,7 @@ import { AccountsProjectListScreen } from '../../screens/accounts/AccountsProjec
 import { AddExpenseScreen } from '../../screens/accounts/AddExpenseScreen';
 import { ExpenseDetailsScreen } from '../../screens/accounts/ExpenseDetailsScreen';
 import { ExpenseListScreen } from '../../screens/accounts/ExpenseListScreen';
+import { DailyReportScreen } from '../../screens/home/DailyReportScreen';
 import  HomeDashboardScreen  from '../../screens/home/HomeDashboardScreen';
 import { LabourFormScreen } from '../../screens/modules/LabourFormScreen';
 import { LabourListScreen } from '../../screens/modules/LabourListScreen';
@@ -35,6 +36,7 @@ export function HomeStack() {
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="HomeMain" component={HomeDashboardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProjectsList" component={ProjectsListScreen} options={{ title: 'Projects' }} />
+      <Stack.Screen name="DailyReport" component={DailyReportScreen} options={{ title: 'Daily reports' }} />
       <Stack.Screen name="ProjectModules" component={ProjectModulesScreen} options={{ title: 'Site modules' }} />
       <Stack.Screen name="LabourModule" component={LabourModuleScreen} options={{ title: 'Labour' }} />
       <Stack.Screen name="LabourList" component={LabourListScreen} options={{ title: "Today's labour" }} />

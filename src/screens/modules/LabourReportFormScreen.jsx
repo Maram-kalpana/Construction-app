@@ -1,109 +1,45 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
-  Alert, KeyboardAvoidingView, Platform, ScrollView,
-  StyleSheet, Text, View, TouchableOpacity
+  KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, Text, TextInput, View, TouchableOpacity
 } from 'react-native';
 
-import { AppTextField } from '../../components/AppTextField';
+import { DatePickerField } from '../../components/DatePickerField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
 export function LabourReportFormScreen({ route, navigation }) {
-  const { projectId, entryId } = route.params || {};
+  const { projectId } = route.params || {};
   const {
-    getDailyBundle, addLabourEntry, deleteLabourEntry,
-    findLabourByPhone, labourPersonById, dateKey
+    getDailyBundle, labourPersonById, vendors, dateKey, attendanceLabourIds
   } = useApp();
-
   const today = dateKey();
-  const bundle = getDailyBundle(projectId, today);
-  const editing = useMemo(
-    () => bundle.labourEntries.find((e) => e.id === entryId) ?? null,
-    [bundle.labourEntries, entryId]
-  );
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [search, setSearch] = useState('');
 
-  const [phone, setPhone]                   = useState(editing ? labourPersonById(editing.labourId)?.phone || '' : '');
-  const [labourId, setLabourId]             = useState(editing?.labourId || null);
-  const [masteryName, setMasteryName]       = useState(editing?.masteryName || '');
-  const [mason, setMason]                   = useState(String(editing?.mason || ''));
-  const [maleSkilled, setMaleSkilled]       = useState(String(editing?.maleSkilled || ''));
-  const [femaleUnskilled, setFemaleUnskilled] = useState(String(editing?.femaleUnskilled || ''));
-  const [others, setOthers]                 = useState(String(editing?.others || ''));
-  const [workDone, setWorkDone]             = useState(editing?.workDone || '');
-  const [showForm, setShowForm]             = useState(!!editing); // show form only when editing or after tap
+  const bundle = getDailyBundle(projectId, selectedDate);
+  const attendedIds = attendanceLabourIds(projectId, selectedDate);
 
-  const person = labourId ? labourPersonById(labourId) : null;
+  const vendorsWithRows = useMemo(() => {
+    const people = attendedIds.map((id) => labourPersonById(id)).filter(Boolean);
+    const map = {};
+    people.forEach((p) => {
+      const key = p.vendorId || 'no_vendor';
+      if (!map[key]) map[key] = [];
+      map[key].push(p);
+    });
+    return Object.entries(map).map(([vendorId, persons], idx) => ({
+      id: vendorId,
+      slNo: idx + 1,
+      vendorName: vendorId === 'no_vendor' ? 'No Vendor' : (vendors.find((v) => v.id === vendorId)?.name || 'Vendor'),
+      persons,
+    })).filter((v) => !search.trim() || v.vendorName.toLowerCase().includes(search.toLowerCase()));
+  }, [attendedIds, labourPersonById, search, vendors]);
 
-  const onLookup = () => {
-    const found = findLabourByPhone(phone);
-    if (!found) {
-      Alert.alert('Not found', 'Labour not found by phone. Add labour first.');
-      return;
-    }
-    setLabourId(found.id);
-  };
-
-  const onSave = async () => {
-    if (!labourId) {
-      Alert.alert('Select labour', 'Find and select a labour by phone.');
-      return;
-    }
-    await addLabourEntry(
-      projectId,
-      { id: editing?.id, labourId, masteryName, mason, maleSkilled, femaleUnskilled, others, workDone },
-      today,
-    );
-    navigation.goBack();
-  };
-
-  const onDelete = async () => {
-    await deleteLabourEntry(projectId, editing.id, today);
-    navigation.goBack();
-  };
-
-  // ── TABLE ──────────────────────────────────────────────
-  const TableView = () => (
-    <View style={styles.tableWrap}>
-      {/* Header */}
-      <View style={styles.tableHeader}>
-        <Text style={[styles.thCell, styles.colSl]}>Sl.{'\n'}No.</Text>
-        <Text style={[styles.thCell, styles.colParty]}>Party Name</Text>
-        <Text style={[styles.thCell, styles.colLabour]}>M</Text>
-        <Text style={[styles.thCell, styles.colLabour]}>F</Text>
-        <Text style={[styles.thCell, styles.colLabour]}>Mation</Text>
-        <Text style={[styles.thCell, styles.colWork]}>Work Done{'\n'}Measurements</Text>
-      </View>
-
-      {/* Rows */}
-      {bundle.labourEntries.length === 0 ? (
-        <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No entries yet. Add a report below.</Text>
-        </View>
-      ) : (
-        bundle.labourEntries.map((entry, index) => {
-          const lp = labourPersonById(entry.labourId);
-          return (
-            <TouchableOpacity
-              key={entry.id}
-              style={[styles.tableRow, index % 2 === 0 && styles.rowEven]}
-              onPress={() => navigation.push('LabourReportForm', { projectId, entryId: entry.id })}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.tdCell, styles.colSl]}>{index + 1}</Text>
-              <Text style={[styles.tdCell, styles.colParty]}>{entry.masteryName || lp?.name || '—'}</Text>
-              <Text style={[styles.tdCell, styles.colLabour]}>{entry.mason || '0'}</Text>
-              <Text style={[styles.tdCell, styles.colLabour]}>{entry.maleSkilled || '0'}</Text>
-              <Text style={[styles.tdCell, styles.colLabour]}>{entry.femaleUnskilled || '0'}</Text>
-              <Text style={[styles.tdCell, styles.colWork]} numberOfLines={2}>{entry.workDone || '—'}</Text>
-            </TouchableOpacity>
-          );
-        })
-      )}
-    </View>
-  );
+  const totalPresent = vendorsWithRows.reduce((sum, v) => sum + v.persons.length, 0);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -118,98 +54,109 @@ export function LabourReportFormScreen({ route, navigation }) {
         >
           {/* ── TITLE ── */}
           <Text style={styles.h1}>Daily Labour Report</Text>
-          <Text style={styles.sub}>Today's entries — tap a row to edit.</Text>
+          <Text style={styles.sub}>Date-wise entries and attended labour list.</Text>
 
-          {/* ── TABLE ── */}
-          <TableView />
-
-          {/* ── ADD BUTTON (only when not already showing form) ── */}
-          {!showForm && !editing && (
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => setShowForm(true)}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons name="plus-circle-outline" size={20} color="#fff" />
-              <Text style={styles.addBtnText}>Add Labour Report</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* ── FORM (shown after tapping Add or when editing) ── */}
-          {(showForm || editing) && (
-            <View style={styles.formCard}>
-              <Text style={styles.formTitle}>
-                {editing ? '✏️ Edit Entry' : '➕ New Entry'}
-              </Text>
-
-              {/* Phone lookup */}
-              <View style={styles.lookupRow}>
-                <AppTextField
-                  label="Labour phone"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  style={styles.inputFlex}
-                  placeholder="Find labour by phone"
-                />
-                <GradientButton title="Find" onPress={onLookup} style={styles.findBtn} />
-              </View>
-              <Text style={styles.personText}>
-                {person ? `✅ ${person.name}` : 'No labour selected'}
-              </Text>
-
-              <AppTextField
-                label="Party name"
-                value={masteryName}
-                onChangeText={setMasteryName}
-                placeholder="Party / mastery"
+          {/* ── ROW: Search + Date side by side ── */}
+          <View style={styles.controlRow}>
+            <View style={styles.searchWrap}>
+              <MaterialCommunityIcons name="magnify" size={18} color={colors.mutedText} />
+              <TextInput
+                style={styles.searchInput}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search party..."
+                placeholderTextColor={colors.mutedText}
               />
-
-              <View style={styles.grid2}>
-                <AppTextField label="Mason (M)" value={mason} onChangeText={setMason} keyboardType="numeric" style={styles.half} placeholder="0" />
-                <AppTextField label="Male / Skilled (F)" value={maleSkilled} onChangeText={setMaleSkilled} keyboardType="numeric" style={styles.half} placeholder="0" />
-              </View>
-
-              <View style={styles.grid2}>
-                <AppTextField label="Female / Unskilled" value={femaleUnskilled} onChangeText={setFemaleUnskilled} keyboardType="numeric" style={styles.half} placeholder="0" />
-                <AppTextField label="Others (Mation)" value={others} onChangeText={setOthers} keyboardType="numeric" style={styles.half} placeholder="0" />
-              </View>
-
-              <AppTextField
-                label="Work done / measurements"
-                value={workDone}
-                onChangeText={setWorkDone}
-                multiline
-                numberOfLines={3}
-                placeholder="e.g. 80 x 9' walls"
-              />
-
-              {/* Save */}
-              <GradientButton
-                title={editing ? 'Update report' : 'Save report'}
-                onPress={onSave}
-                left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
-              />
-
-              {/* Delete — only when editing */}
-              {editing && (
-                <GradientButton
-                  title="Delete report"
-                  onPress={onDelete}
-                  colors={['#c62828', '#ef5350']}
-                  style={styles.delBtn}
-                />
-              )}
-
-              {/* Cancel — only when adding new */}
-              {!editing && (
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowForm(false)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
+              {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+                  <MaterialCommunityIcons name="close-circle" size={16} color={colors.mutedText} />
                 </TouchableOpacity>
               )}
             </View>
+            <View style={styles.dateWrap}>
+              <DatePickerField label="Date" value={selectedDate} onChange={setSelectedDate} style={styles.flex1} />
+            </View>
+          </View>
+
+          {/* ── SUMMARY BADGE ── */}
+          {totalPresent > 0 && (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryBadge}>
+                <MaterialCommunityIcons name="account-check" size={15} color="#137333" />
+                <Text style={styles.summaryText}>Total Present: {totalPresent}</Text>
+              </View>
+              <View style={styles.summaryBadge}>
+                <MaterialCommunityIcons name="office-building-outline" size={15} color="#1d4ed8" />
+                <Text style={[styles.summaryText, { color: '#1d4ed8' }]}>Parties: {vendorsWithRows.length}</Text>
+              </View>
+            </View>
           )}
 
+          {/* ── VENDOR CARDS ── */}
+          {vendorsWithRows.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <MaterialCommunityIcons name="calendar-blank-outline" size={44} color="#cbd5e1" />
+              <Text style={styles.emptyTitle}>No attendance marked</Text>
+              <Text style={styles.emptyText}>No attendance records found for the selected date.</Text>
+            </View>
+          ) : vendorsWithRows.map((v) => {
+            const male = v.persons.filter((p) => p.gender === 'male').length;
+            const female = v.persons.filter((p) => p.gender !== 'male').length;
+            const total = v.persons.length;
+            return (
+              <TouchableOpacity
+                key={v.id}
+                style={styles.vendorCard}
+                activeOpacity={0.82}
+                onPress={() => navigation.navigate('LabourList', { projectId, vendorId: v.id, date: selectedDate })}
+              >
+                {/* card header */}
+                <View style={styles.vendorHeader}>
+                  <View style={styles.vendorIndex}>
+                    <Text style={styles.vendorIndexText}>{v.slNo}</Text>
+                  </View>
+                  <Text style={styles.vendorName} numberOfLines={1}>{v.vendorName}</Text>
+                  <View style={styles.editChip}>
+                    <MaterialCommunityIcons name="pencil-outline" size={14} color="#2563eb" />
+                    <Text style={styles.editChipText}>Edit</Text>
+                  </View>
+                </View>
+
+                {/* stats */}
+                <View style={styles.statsRow}>
+                  <View style={[styles.statBox, styles.statMale]}>
+                    <Text style={styles.statNum}>{male}</Text>
+                    <Text style={styles.statLabel}>Mason</Text>
+                  </View>
+                  <View style={[styles.statBox, styles.statFemale]}>
+                    <Text style={[styles.statNum, { color: '#9d174d' }]}>{female}</Text>
+                    <Text style={[styles.statLabel, { color: '#be185d' }]}>Unskilled</Text>
+                  </View>
+                  <View style={[styles.statBox, styles.statTotal]}>
+                    <Text style={[styles.statNum, { color: '#fff', fontSize: 22 }]}>{total}</Text>
+                    <Text style={[styles.statLabel, { color: '#bfdbfe' }]}>Total</Text>
+                  </View>
+                </View>
+
+                {/* names preview */}
+                {v.persons.length > 0 && (
+                  <View style={styles.namesRow}>
+                    <MaterialCommunityIcons name="account-multiple-outline" size={13} color={colors.mutedText} />
+                    <Text style={styles.namesText} numberOfLines={1}>
+                      {v.persons.map((p) => p.name).slice(0, 4).join(', ')}
+                      {v.persons.length > 4 ? ` +${v.persons.length - 4} more` : ''}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+
+          <GradientButton
+            title="Save Report"
+            onPress={() => navigation.goBack()}
+            left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -220,138 +167,115 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 40 },
 
-  h1: { color: colors.text, fontSize: 22, fontWeight: '900' },
-  sub: { marginTop: 4, color: colors.mutedText, marginBottom: 14, fontSize: 13 },
+  h1: { color: '#1a2f4e', fontSize: 22, fontWeight: '900' },
+  sub: { marginTop: 3, color: colors.mutedText, marginBottom: 14, fontSize: 12 },
 
-  // ── TABLE ──
-  tableWrap: {
-    borderWidth: 1,
-    borderColor: '#c8d6e5',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-
-  tableHeader: {
+  /* ── control row: search + date ── */
+  controlRow: {
     flexDirection: 'row',
-    backgroundColor: '#dbeafe',
-    borderBottomWidth: 1,
-    borderBottomColor: '#93c5fd',
-  },
-
-  thCell: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#1e3a5f',
-    textAlign: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRightWidth: 1,
-    borderRightColor: '#93c5fd',
-  },
-
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2eaf4',
-    backgroundColor: '#fff',
-  },
-
-  rowEven: {
-    backgroundColor: '#f8fbff',
-  },
-
-  tdCell: {
-    fontSize: 12,
-    color: '#1f2f4b',
-    textAlign: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRightWidth: 1,
-    borderRightColor: '#e2eaf4',
-  },
-
-  // column widths
-  colSl:     { width: 36 },
-  colParty:  { flex: 1, textAlign: 'left', paddingLeft: 8 },
-  colLabour: { width: 44 },
-  colWork:   { flex: 1, textAlign: 'left', paddingLeft: 6 },
-
-  emptyRow: {
-    padding: 20,
-    alignItems: 'center',
-  },
-
-  emptyText: {
-    color: colors.mutedText,
-    fontSize: 13,
-  },
-
-  // ── ADD BUTTON ──
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#4A90E2',
-    borderRadius: 14,
-    height: 48,
-    marginBottom: 16,
-  },
-
-  addBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-
-  // ── FORM CARD ──
-  formCard: {
-    backgroundColor: '#f8fbff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#dbeafe',
-    padding: 16,
-    marginBottom: 10,
-  },
-
-  formTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
+    alignItems: 'flex-end', // ✅ aligns bottoms perfectly
+    gap: 10,
     marginBottom: 14,
   },
+  
+  searchWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    paddingHorizontal: 10,
+    height: 48, // ✅ fixed height
+    gap: 6,
+  },
+  searchInput: { flex: 1, fontSize: 13, color: colors.text },
+  dateWrap: { flex: 1 },
+  flex1: { flex: 1 },
 
-  lookupRow: {
+  /* ── summary ── */
+  summaryRow: {
     flexDirection: 'row',
     gap: 10,
-    alignItems: 'flex-end',
+    marginBottom: 14,
   },
-
-  inputFlex: { flex: 1, marginBottom: 0 },
-  findBtn:   { width: 90, marginBottom: 12 },
-
-  personText: {
-    marginBottom: 12,
-    color: colors.mutedText,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-
-  grid2: { flexDirection: 'row', gap: 10 },
-  half:  { flex: 1 },
-
-  delBtn: { marginTop: 10 },
-
-  cancelBtn: {
-    marginTop: 12,
+  summaryBadge: {
+    flex: 1, // ✅ makes equal width like Date/Search
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'center', // ✅ center content
+    gap: 5,
+    backgroundColor: '#f0fdf4',
+    paddingVertical: 10, // keep height consistent
+    borderRadius: 12, // match input look
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
   },
+  summaryText: { color: '#137333', fontWeight: '700', fontSize: 13 },
 
-  cancelText: {
-    color: '#ef4444',
-    fontWeight: '700',
-    fontSize: 14,
+  /* ── vendor card ── */
+  vendorCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2eaf4',
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
+  vendorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  vendorIndex: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vendorIndexText: { color: '#1e3a5f', fontWeight: '900', fontSize: 13 },
+  vendorName: { flex: 1, color: '#1a2f4e', fontSize: 18, fontWeight: '900' },
+  editChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#eff6ff',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  editChipText: { color: '#2563eb', fontSize: 12, fontWeight: '700' },
+
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  statBox: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statMale: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' },
+  statFemale: { backgroundColor: '#fdf2f8', borderWidth: 1, borderColor: '#fbcfe8' },
+  statTotal: { backgroundColor: '#2563eb', flex: 1.2 },
+  statNum: { color: '#1e3a5f', fontWeight: '900', fontSize: 20, lineHeight: 24 },
+  statLabel: { color: '#6b8fb5', fontSize: 11, fontWeight: '700', marginTop: 2 },
+
+  namesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  namesText: { flex: 1, color: colors.mutedText, fontSize: 12 },
+
+  /* ── empty ── */
+  emptyWrap: { alignItems: 'center', paddingVertical: 40 },
+  emptyTitle: { marginTop: 12, fontWeight: '900', fontSize: 16, color: '#374151' },
+  emptyText: { marginTop: 6, color: colors.mutedText, fontSize: 13, textAlign: 'center' },
 });

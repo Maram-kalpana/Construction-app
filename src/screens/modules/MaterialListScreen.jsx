@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
@@ -31,13 +32,14 @@ export function MaterialListScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { getDailyBundle, dateKey } = useApp();
   const today = dateKey();
-  const { materialsIn, materialsOut } = useMemo(() => getDailyBundle(projectId, today), [getDailyBundle, projectId, today]);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [search, setSearch] = useState('');
+  const { materialsIn, materialsOut } = useMemo(() => getDailyBundle(projectId, selectedDate), [getDailyBundle, projectId, selectedDate]);
   const combined = useMemo(
     () =>
-      [...materialsIn.map((m) => ({ ...m, direction: 'in' })), ...materialsOut.map((m) => ({ ...m, direction: 'out' }))].sort(
-        () => 0,
-      ),
-    [materialsIn, materialsOut],
+      [...materialsIn.map((m) => ({ ...m, direction: 'in' })), ...materialsOut.map((m) => ({ ...m, direction: 'out' }))]
+        .filter((m) => !search.trim() || (m.itemName || '').toLowerCase().includes(search.toLowerCase())),
+    [materialsIn, materialsOut, search],
   );
 
   return (
@@ -47,20 +49,24 @@ export function MaterialListScreen({ route, navigation }) {
           <Text style={styles.h1}>Materials</Text>
           <Text style={styles.sub}>Inward deliveries and outward consumption (qty / nos).</Text>
         </View>
+        <View style={styles.searchWrap}>
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.mutedText} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search item name..."
+            placeholderTextColor={colors.mutedText}
+          />
+        </View>
         <View style={styles.actions}>
+          <DatePickerField label="" value={selectedDate} onChange={setSelectedDate} style={styles.dateBtnWrap} />
           <GradientButton
-            title="Add inward"
+            title="Add Material"
             onPress={() => navigation.navigate('MaterialForm', { projectId, direction: 'in' })}
             colors={['#2f86de', '#62b6ff']}
             style={styles.halfBtn}
-            left={<MaterialCommunityIcons name="arrow-down-bold" size={18} color="#fff" />}
-          />
-          <GradientButton
-            title="Add outward"
-            onPress={() => navigation.navigate('MaterialForm', { projectId, direction: 'out' })}
-            colors={['#2f86de', '#62b6ff']}
-            style={styles.halfBtn}
-            left={<MaterialCommunityIcons name="arrow-up-bold" size={18} color="#fff" />}
+            left={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#fff" />}
           />
         </View>
         <FlatList
@@ -91,7 +97,22 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   h1: { color: colors.text, fontSize: 22, fontWeight: '900' },
   sub: { marginTop: 6, color: colors.mutedText, lineHeight: 18 },
+  searchWrap: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: { flex: 1, color: colors.text, paddingVertical: 10 },
   actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 8 },
+  dateBtnWrap: { flex: 1 },
   halfBtn: { flex: 1 },
   list: { padding: 16, paddingBottom: 28, gap: 12 },
   card: {

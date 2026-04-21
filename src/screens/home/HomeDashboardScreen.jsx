@@ -1,35 +1,60 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageBackground } from 'react-native';
+import {
+  FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  ImageBackground,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const tasks = [
+  {
+    id: '1',
+    title: 'Projects',
+    sub: 'Open assigned project list',
+    icon: 'office-building-outline',
+    screen: 'ProjectsList',
+  },
+  {
+    id: '2',
+    title: 'Vendors',
+    sub: 'View supplier records',
+    icon: 'truck-delivery-outline',
+    screen: 'VendorsList',
+  },
+  {
+    id: '3',
+    title: 'Accounts',
+    sub: 'Check allocated balances',
+    icon: 'bank-outline',
+    screen: 'AccountsProjectList',
+  },
+  {
+    id: '4',
+    title: 'Daily Report',
+    sub: 'View daily site reports',
+    icon: 'clipboard-text-outline',
+    screen: 'DailyReport',
+  },
+];
+
 export default function HomeDashboardScreen({ navigation }) {
-  const tasks = [
-    {
-      id: '1',
-      title: 'Projects',
-      sub: 'Open assigned project list',
-      time: '10:00 AM',
-      icon: 'office-building-outline',
-      onPress: () => navigation?.navigate?.('ProjectsList'),
-    },
-    {
-      id: '2',
-      title: 'Vendors',
-      sub: 'View supplier records',
-      time: '11:00 AM',
-      icon: 'truck-delivery-outline',
-      onPress: () => navigation?.navigate?.('VendorsList'),
-    },
-    {
-      id: '3',
-      title: 'Accounts',
-      sub: 'Check allocated balances',
-      time: '01:30 PM',
-      icon: 'bank-outline',
-      onPress: () => navigation?.navigate?.('AccountsProjectList'),
-    },
-  ];
+  const renderCard = ({ item }) => (
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={() => navigation?.navigate?.(item.screen)}
+    >
+      <View style={styles.iconBox}>
+        <MaterialCommunityIcons name={item.icon} size={32} color="#4A90E2" />
+      </View>
+      <Text style={styles.cardTitle}>{item.title}</Text>
+      <Text style={styles.cardSub}>{item.sub}</Text>
+    </Pressable>
+  );
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -43,36 +68,23 @@ export default function HomeDashboardScreen({ navigation }) {
         <View style={styles.heroOverlay} />
 
         <View style={styles.heroBody}>
-          <Text style={styles.heroTitle}>My Tasks</Text>
+          <Text style={styles.heroTitle}>My Dashboard</Text>
           <Text style={styles.heroSub}>📍 Monday, 1 June</Text>
         </View>
 
         <View style={styles.heroWave} />
       </ImageBackground>
 
-      {/* ── SCROLLABLE BODY ── */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+      {/* ── 2×2 GRID ── */}
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCard}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-      >
-        {tasks.map((item) => (
-          <Pressable key={item.id} style={styles.card} onPress={item.onPress}>
-            <View style={styles.leftBar} />
-            <View style={styles.iconBox}>
-              <MaterialCommunityIcons name={item.icon} size={24} color="#4A90E2" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardSub}>{item.sub}</Text>
-            </View>
-            <View style={styles.timeBadge}>
-              <MaterialCommunityIcons name="clock-outline" size={11} color="#aaa" />
-              <Text style={styles.timeText}> {item.time}</Text>
-            </View>
-          </Pressable>
-        ))}
-      </ScrollView>
+      />
 
     </SafeAreaView>
   );
@@ -81,24 +93,24 @@ export default function HomeDashboardScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f4f7fb',
+    backgroundColor: '#f0f3f8',
   },
 
   // ── HERO ──
   hero: {
     width: '100%',
-    height: 240,
+    height: 220,
     justifyContent: 'flex-end',
   },
 
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20,40,80,0.45)',
+    backgroundColor: 'rgba(18,35,75,0.50)',
   },
 
   heroBody: {
     paddingHorizontal: 22,
-    paddingBottom: 55,
+    paddingBottom: 52,
   },
 
   heroTitle: {
@@ -119,31 +131,33 @@ const styles = StyleSheet.create({
     bottom: -1,
     width: '100%',
     height: 40,
-    backgroundColor: '#f4f7fb',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    backgroundColor: '#f0f3f8',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
 
-  // ── SCROLL ──
-  scroll: {
-    flex: 1,
-  },
-
-  scrollContent: {
-    paddingHorizontal: 16,
+  // ── GRID ──
+  listContent: {
+    paddingHorizontal: 14,
     paddingTop: 16,
     paddingBottom: 30,
   },
 
-  // ── CARDS ──
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+
+  // ── CARD ──
   card: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
-    flexDirection: 'row',
+    borderRadius: 20,
+    width: '48%',
+    paddingVertical: 26,
+    paddingHorizontal: 14,
     alignItems: 'center',
-    marginBottom: 14,
-    overflow: 'hidden',
+    justifyContent: 'center',
+    gap: 10,
 
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.08)' }
@@ -156,51 +170,32 @@ const styles = StyleSheet.create({
         }),
   },
 
-  leftBar: {
-    position: 'absolute',
-    left: 0,
-    top: 14,
-    bottom: 14,
-    width: 4,
-    backgroundColor: '#4A90E2',
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
+  cardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
 
   iconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: '#eaf4ff',
+    width: 62,
+    height: 62,
+    borderRadius: 18,
+    backgroundColor: '#eaf3ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginBottom: 4,
   },
 
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#1f2f4b',
+    color: '#1e2f4d',
+    textAlign: 'center',
   },
 
   cardSub: {
-    fontSize: 12,
-    color: '#8a99b5',
-    marginTop: 3,
-  },
-
-  timeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f4fa',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-
-  timeText: {
-    color: '#7a8aa8',
     fontSize: 11,
-    fontWeight: '600',
+    color: '#8a99b5',
+    textAlign: 'center',
+    lineHeight: 15,
   },
 });

@@ -15,7 +15,6 @@ import {
   Keyboard,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -24,7 +23,6 @@ const { height, width } = Dimensions.get('window');
 export default function LoginScreen() {
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
-
   const [username, setUsername] = useState('manager');
   const [password, setPassword] = useState('manager123');
   const [secure, setSecure] = useState(true);
@@ -32,8 +30,18 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(false);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ── FULL-SCREEN CONSTRUCTION BACKGROUND ── */}
+      <ImageBackground
+        source={require('../../../assets/construction1.jpg')}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      >
+        {/* dark tint overlay */}
+        <View style={styles.overlay} />
+      </ImageBackground>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -46,34 +54,16 @@ export default function LoginScreen() {
           bounces={false}
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.screen}>
+            <View style={[styles.screen, { paddingTop: insets.top }]}>
 
-              {/* ── TOP IMAGE ── */}
-              <View style={styles.topContainer}>
-                <ImageBackground
-                  source={require('../../../assets/construction1.jpg')}
-                  style={styles.topBg}
-                  resizeMode="cover"
-                />
-
-                {/* ── WAVE CURVE ── */}
-                <View style={styles.curveContainer}>
-                  <Svg
-                    width={width}
-                    height={110}
-                    viewBox={`0 0 ${width} 110`}
-                    preserveAspectRatio="none"
-                  >
-                    <Path
-                      d={`M0,0 Q${width * 0.35},110 ${width},50 L${width},110 L0,110 Z`}
-                      fill="#fff"
-                    />
-                  </Svg>
-                </View>
+              {/* ── TOP BADGE ── */}
+              <View style={styles.topBadge}>
+                <Text style={styles.topTitle}>LOGIN</Text>
+                <Text style={styles.topSub}>TO CONTINUE</Text>
               </View>
 
-              {/* ── FORM CARD ── */}
-              <View style={styles.card}>
+              {/* ── GLASS CARD (no expo-blur) ── */}
+              <View style={styles.glassCard}>
 
                 <View style={styles.titleWrapper}>
                   <Text style={styles.title}>Sign in</Text>
@@ -82,12 +72,12 @@ export default function LoginScreen() {
 
                 <Text style={styles.label}>Username</Text>
                 <View style={styles.inputBox}>
-                  <MaterialCommunityIcons name="account-outline" size={20} color="#bbb" />
+                  <MaterialCommunityIcons name="account-outline" size={20} color="#4A90E2" />
                   <TextInput
                     value={username}
                     onChangeText={setUsername}
                     placeholder="Enter username"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor="rgba(255,255,255,0.35)"
                     style={styles.input}
                     autoCapitalize="none"
                     returnKeyType="next"
@@ -96,12 +86,12 @@ export default function LoginScreen() {
 
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputBox}>
-                  <MaterialCommunityIcons name="lock-outline" size={20} color="#bbb" />
+                  <MaterialCommunityIcons name="lock-outline" size={20} color="#4A90E2" />
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
                     placeholder="Enter password"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor="rgba(255,255,255,0.35)"
                     secureTextEntry={secure}
                     style={styles.input}
                     returnKeyType="done"
@@ -111,7 +101,7 @@ export default function LoginScreen() {
                     <MaterialCommunityIcons
                       name={secure ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color="#bbb"
+                      color="rgba(255,255,255,0.4)"
                     />
                   </TouchableOpacity>
                 </View>
@@ -121,7 +111,11 @@ export default function LoginScreen() {
                     style={styles.rememberRow}
                     onPress={() => setRememberMe(!rememberMe)}
                   >
-                    <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
+                    <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                      {rememberMe && (
+                        <MaterialCommunityIcons name="check" size={11} color="#fff" />
+                      )}
+                    </View>
                     <Text style={styles.remember}>Remember Me</Text>
                   </TouchableOpacity>
                   <Text style={styles.forgot}>Forgot Password?</Text>
@@ -131,8 +125,10 @@ export default function LoginScreen() {
 
                 <TouchableOpacity
                   style={styles.loginBtn}
+                  activeOpacity={0.85}
                   onPress={async () => {
                     Keyboard.dismiss();
+                    setError('');
                     try {
                       await login({ username, password });
                     } catch {
@@ -143,10 +139,15 @@ export default function LoginScreen() {
                   <Text style={styles.btnText}>Login</Text>
                 </TouchableOpacity>
 
-                {/* bottom padding so content clears keyboard */}
-                <View style={{ height: insets.bottom + 40 }} />
+                <View style={styles.dotsRow}>
+                  <View style={[styles.dot, styles.dotActive]} />
+                  <View style={styles.dot} />
+                  <View style={styles.dot} />
+                </View>
+
               </View>
 
+              <View style={{ height: insets.bottom + 24 }} />
             </View>
           </TouchableWithoutFeedback>
         </ScrollView>
@@ -156,35 +157,54 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#fff',
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,22,40,0.58)',
   },
 
   screen: {
     flex: 1,
+    paddingHorizontal: 20,
   },
 
-  topContainer: {
-    position: 'relative',
+  topBadge: {
+    alignItems: 'center',
+    marginTop: 36,
+    marginBottom: 28,
   },
 
-  topBg: {
-    height: height * 0.42,  // ⬅ reduced from 0.50 so form has more room
+  topTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 8,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
 
-  curveContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 110,
+  topSub: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 5,
+    marginTop: 4,
   },
 
-  card: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 28,
-    paddingTop: 4,
+  // ── glass card — no expo-blur needed ──
+  glassCard: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: 'rgba(12,30,65,0.68)',   // dark navy glass
+    padding: 24,
+    // subtle inner highlight at top edge
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
   },
 
   titleWrapper: {
@@ -192,39 +212,44 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: '800',
-    color: '#111',
+    color: '#fff',
+    letterSpacing: -0.5,
   },
 
   titleUnderline: {
-    width: 50,
+    width: 36,
     height: 3,
     backgroundColor: '#e85757',
     marginTop: 6,
+    borderRadius: 2,
   },
 
   label: {
-    marginTop: 8,
-    marginBottom: 4,
-    color: '#888',
-    fontSize: 13,
+    marginBottom: 5,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginBottom: 16,
-    paddingBottom: 6,
+    borderBottomColor: 'rgba(255,255,255,0.22)',
+    marginBottom: 18,
+    paddingBottom: 8,
   },
 
   input: {
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
-    color: '#222',
+    color: '#fff',
+    fontWeight: '500',
   },
 
   row: {
@@ -245,7 +270,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#4A90E2',
     marginRight: 8,
-    borderRadius: 2,
+    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   checkboxChecked: {
@@ -253,40 +280,62 @@ const styles = StyleSheet.create({
   },
 
   remember: {
-    color: '#555',
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 13,
   },
 
   forgot: {
     color: '#e85757',
     fontSize: 13,
+    fontWeight: '600',
   },
 
   error: {
-    color: 'red',
+    color: '#e85757',
     marginBottom: 8,
     fontSize: 13,
   },
 
   loginBtn: {
-    alignSelf: 'center',
-    width: '75%',
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(74,144,226,0.85)',
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#4A90E2',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 6,
-    elevation: 3,
     shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 8,
   },
 
   btnText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
+    letterSpacing: 0.5,
+  },
+
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 18,
+  },
+
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+
+  dotActive: {
+    backgroundColor: '#4A90E2',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

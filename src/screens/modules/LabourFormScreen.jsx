@@ -5,6 +5,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -15,18 +16,36 @@ import {
 import { SegmentedButtons } from 'react-native-paper';
 
 import { AppTextField } from '../../components/AppTextField';
+import { DatePickerField } from '../../components/DatePickerField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 
+function parseTimeToMinutes(t) {
+  const s = String(t || '').trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/i);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  const ap = m[3]?.toLowerCase();
+  if (ap === 'pm' && h < 12) h += 12;
+  if (ap === 'am' && h === 12) h = 0;
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+  return h * 60 + min;
+}
+
+function diffHours(start, end) {
+  const a = parseTimeToMinutes(start);
+  const b = parseTimeToMinutes(end);
+  if (a == null || b == null || b <= a) return '';
+  return ((b - a) / 60).toFixed(1);
+}
+
 export function LabourFormScreen({ route, navigation }) {
   const { labourId: routeLabourId } = route.params || {};
-  const {
-    findLabourByPhone,
-    upsertLabourPerson,
-    labourPersonById,
-  } = useApp();
+  const { findLabourByPhone, upsertLabourPerson, labourPersonById, vendors, dateKey } = useApp();
 
   const [phone, setPhone] = useState('');
   const [lookupHit, setLookupHit] = useState(null);
@@ -35,6 +54,12 @@ export function LabourFormScreen({ route, navigation }) {
   const [gender, setGender] = useState('male');
   const [photoUri, setPhotoUri] = useState(null);
   const [labourId, setLabourId] = useState(null);
+  const [vendorId, setVendorId] = useState(null);
+  const [joinedDate, setJoinedDate] = useState(dateKey());
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [totalHrs, setTotalHrs] = useState('');
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   useEffect(() => {
     if (!routeLabourId) return;
@@ -46,37 +71,55 @@ export function LabourFormScreen({ route, navigation }) {
     setAge(person?.age ?? '');
     setGender(person?.gender ?? 'male');
     setPhotoUri(person?.photoUri ?? null);
+    setVendorId(person?.vendorId ?? null);
+    setJoinedDate(person?.joinedDate ?? dateKey());
+    setStartTime(person?.startTime ?? '');
+    setEndTime(person?.endTime ?? '');
+    setTotalHrs(person?.totalHrs ? String(person.totalHrs) : '');
     setLookupHit(person);
-  }, [routeLabourId, labourPersonById]);
+  }, [routeLabourId, labourPersonById, dateKey]);
 
-  const pickImage = async (useCamera) => {
-  const perm = useCamera
-    ? await ImagePicker.requestCameraPermissionsAsync()
-    : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  // Auto-calculate hours when start or end time changes
+  useEffect(() => {
+    const auto = diffHours(startTime, endTime);
+    if (auto) setTotalHrs(auto);
+  }, [startTime, endTime]);
 
-  if (!perm.granted) {
-    Alert.alert('Permission needed', useCamera ? 'Camera access is required.' : 'Photo library access is required.');
-    return;
-  }
+  const openCamera = async () => {
+    setShowPhotoModal(false);
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Camera access is required.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  };
 
-  const result = useCamera
-    ? await ImagePicker.launchCameraAsync({
-        mediaTypes: [ImagePicker.MediaType.image],  // ✅ add this
-        quality: 0.7,
-        allowsEditing: true,
-        aspect: [1, 1],
-      })
-    : await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.image],  // ✅ add this
-        quality: 0.7,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
-
-  if (!result.canceled && result.assets?.[0]?.uri) {
-    setPhotoUri(result.assets[0].uri);
-  }
-};
+  const openGallery = async () => {
+    setShowPhotoModal(false);
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Photo library access is required.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  };
 
   const onLookup = () => {
     const found = findLabourByPhone(phone);
@@ -97,11 +140,8 @@ export function LabourFormScreen({ route, navigation }) {
   const savePerson = async () => {
     const person = await upsertLabourPerson({
       id: labourId ?? undefined,
-      name,
-      age,
-      gender,
-      phone,
-      photoUri,
+      name, age, gender, phone, photoUri, vendorId, joinedDate,
+      startTime, endTime, totalHrs,
     });
     setLabourId(person.id);
     setLookupHit(person);
@@ -111,8 +151,13 @@ export function LabourFormScreen({ route, navigation }) {
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={styles.label}>Phone (lookup)</Text>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Phone lookup ── */}
+          <Text style={styles.sectionLabel}>Phone Lookup</Text>
           <View style={styles.rowPhone}>
             <AppTextField
               label="Phone number"
@@ -123,64 +168,122 @@ export function LabourFormScreen({ route, navigation }) {
               placeholder="Search by phone number"
             />
             <Pressable onPress={onLookup} style={styles.lookupBtn}>
+              <MaterialCommunityIcons name="magnify" size={18} color="#215da1" />
               <Text style={styles.lookupText}>Find</Text>
             </Pressable>
           </View>
           {lookupHit ? (
-            <Text style={styles.hint}>Matched: {lookupHit.name}</Text>
+            <View style={styles.matchBadge}>
+              <MaterialCommunityIcons name="check-circle" size={14} color="#137333" />
+              <Text style={styles.hintGreen}>Matched: {lookupHit.name}</Text>
+            </View>
           ) : (
-            <Text style={styles.hintMuted}>New worker — complete profile, then daily row.</Text>
+            <Text style={styles.hintMuted}>New worker — complete profile below.</Text>
           )}
 
+          {/* ── Name + Photo ── */}
+          <Text style={styles.sectionLabel}>Worker Info</Text>
           <View style={styles.photoRow}>
-            {photoUri ? <Image source={{ uri: photoUri }} style={styles.photo} /> : <View style={styles.photoPlaceholder} />}
-            <View style={styles.photoActions}>
-              <GradientButton title="Take photo" onPress={() => pickImage(true)} colors={['#2f86de', '#62b6ff']} />
-              <GradientButton
-                title="Gallery"
-                onPress={() => pickImage(false)}
-                colors={['#2f86de', '#62b6ff']}
-                style={styles.mt8}
+            <View style={{ flex: 1 }}>
+              <AppTextField
+                label="Full name"
+                value={name}
+                onChangeText={setName}
+                style={styles.input}
+                placeholder="Enter full name"
+              />
+            </View>
+
+            {/* Photo tap → custom modal (not Alert) */}
+            <Pressable style={styles.photoCircle} onPress={() => setShowPhotoModal(true)}>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.photoIcon} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <MaterialCommunityIcons name="camera-plus" size={26} color="#4A90E2" />
+                  <Text style={styles.photoHint}>Add Photo</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+
+          {/* ── Age + Gender ── */}
+          <View style={styles.grid2}>
+            <AppTextField
+              label="Age"
+              value={age}
+              onChangeText={setAge}
+              keyboardType="numeric"
+              style={[styles.input, styles.half]}
+              placeholder="Age"
+            />
+            <View style={styles.half}>
+              <Text style={styles.fieldLabel}>Gender</Text>
+              <SegmentedButtons
+                value={gender}
+                onValueChange={setGender}
+                buttons={[
+                  { value: 'male', label: 'Male' },
+                  { value: 'female', label: 'Female' },
+                ]}
+                style={styles.segment}
+                theme={{
+                  colors: {
+                    secondaryContainer: 'rgba(125,211,252,0.2)',
+                    onSecondaryContainer: colors.text,
+                    outline: colors.outline,
+                  },
+                }}
               />
             </View>
           </View>
 
-          <AppTextField
-            label="Full name"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            placeholder="Enter labour name"
-          />
-          <AppTextField
-            label="Age"
-            value={age}
-            onChangeText={setAge}
-            keyboardType="numeric"
-            style={styles.input}
-            placeholder="Enter age"
-          />
-          <Text style={styles.label}>Gender</Text>
-          <SegmentedButtons
-            value={gender}
-            onValueChange={setGender}
-            buttons={[
-              { value: 'male', label: 'Male' },
-              { value: 'female', label: 'Female' },
-              { value: 'other', label: 'Other' },
-            ]}
-            style={styles.segment}
-            theme={{
-              colors: {
-                secondaryContainer: 'rgba(125,211,252,0.2)',
-                onSecondaryContainer: colors.text,
-                outline: colors.outline,
-              },
-            }}
-          />
+          {/* ── Date + Vendor ── */}
+          <View style={styles.grid2}>
+            <DatePickerField label="Date" value={joinedDate} onChange={setJoinedDate} style={styles.half} />
+            <SelectField
+              label="Vendor"
+              value={vendorId}
+              onChange={setVendorId}
+              style={styles.half}
+              placeholder="Select vendor"
+              options={[
+                { label: 'Select vendor', value: null },
+                ...vendors.map((v) => ({ label: v.name, value: v.id })),
+              ]}
+            />
+          </View>
 
+          {/* ── Attendance Hours ── */}
+          <Text style={styles.sectionLabel}>Attendance Hours</Text>
+          <Text style={styles.hintMuted}>Use 12h or 24h — e.g. 9:00 AM or 17:30</Text>
+          <View style={styles.grid3}>
+            <AppTextField
+              label="Start time"
+              value={startTime}
+              onChangeText={setStartTime}
+              style={styles.third}
+              placeholder="9:00 AM"
+            />
+            <AppTextField
+              label="Close time"
+              value={endTime}
+              onChangeText={setEndTime}
+              style={styles.third}
+              placeholder="5:30 PM"
+            />
+            <View style={styles.third}>
+              <Text style={styles.fieldLabel}>Total hrs</Text>
+              <View style={styles.hrsPill}>
+                <MaterialCommunityIcons name="clock-outline" size={15} color="#2563eb" />
+                <Text style={styles.hrsValue}>{totalHrs || '—'}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ── Save ── */}
           <GradientButton
-            title={routeLabourId ? 'Update labour' : 'Save labour'}
+            title={routeLabourId ? 'Update Labour' : 'Save Labour'}
             onPress={async () => {
               if (!phone.trim() || name.trim().length < 2) {
                 Alert.alert('Missing info', 'Enter phone and name.');
@@ -193,39 +296,169 @@ export function LabourFormScreen({ route, navigation }) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Photo source picker modal ── */}
+      <Modal
+        visible={showPhotoModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPhotoModal(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowPhotoModal(false)}>
+          <View style={styles.photoModalCard}>
+            <Text style={styles.photoModalTitle}>Add Photo</Text>
+
+            <Pressable style={styles.photoOption} onPress={openCamera}>
+              <View style={styles.photoOptionIcon}>
+                <MaterialCommunityIcons name="camera" size={26} color="#2563eb" />
+              </View>
+              <View style={styles.photoOptionMeta}>
+                <Text style={styles.photoOptionTitle}>Take Photo</Text>
+                <Text style={styles.photoOptionDesc}>Use camera to capture now</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#b0bec5" />
+            </Pressable>
+
+            <View style={styles.divider} />
+
+            <Pressable style={styles.photoOption} onPress={openGallery}>
+              <View style={[styles.photoOptionIcon, { backgroundColor: '#f0fdf4' }]}>
+                <MaterialCommunityIcons name="image-multiple" size={26} color="#16a34a" />
+              </View>
+              <View style={styles.photoOptionMeta}>
+                <Text style={styles.photoOptionTitle}>Choose from Gallery</Text>
+                <Text style={styles.photoOptionDesc}>Pick an existing photo</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#b0bec5" />
+            </Pressable>
+
+            {photoUri && (
+              <>
+                <View style={styles.divider} />
+                <Pressable
+                  style={styles.photoOption}
+                  onPress={() => { setPhotoUri(null); setShowPhotoModal(false); }}
+                >
+                  <View style={[styles.photoOptionIcon, { backgroundColor: '#fef2f2' }]}>
+                    <MaterialCommunityIcons name="delete-outline" size={26} color="#ef4444" />
+                  </View>
+                  <View style={styles.photoOptionMeta}>
+                    <Text style={[styles.photoOptionTitle, { color: '#ef4444' }]}>Remove Photo</Text>
+                    <Text style={styles.photoOptionDesc}>Clear current photo</Text>
+                  </View>
+                </Pressable>
+              </>
+            )}
+
+            <Pressable style={styles.cancelBtn} onPress={() => setShowPhotoModal(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 40 },
-  label: { color: colors.text, fontWeight: '800', marginBottom: 8 },
-  rowPhone: { flexDirection: 'row', gap: 10, alignItems: 'flex-end', marginBottom: 6 },
+  scroll: { padding: 16, paddingBottom: 48 },
+
+  sectionLabel: {
+    color: '#1a2f4e',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginTop: 10,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2563eb',
+    paddingLeft: 8,
+  },
+  fieldLabel: { color: colors.text, fontWeight: '700', fontSize: 13, marginBottom: 6 },
+
+  rowPhone: { flexDirection: 'row', gap: 10, alignItems: 'flex-end', marginBottom: 8 },
   inputFlex: { flex: 1 },
   input: { marginBottom: 12 },
   lookupBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    borderRadius: 18,
-    backgroundColor: 'rgba(59,144,232,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(59,144,232,0.28)',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 14,
+    borderRadius: 14, marginBottom: 12,
+    backgroundColor: 'rgba(59,144,232,0.10)',
+    borderWidth: 1, borderColor: 'rgba(59,144,232,0.28)',
   },
-  lookupText: { color: '#215da1', fontWeight: '900' },
-  hint: { color: '#137333', marginBottom: 12, fontWeight: '700' },
-  hintMuted: { color: colors.mutedText, marginBottom: 12 },
+  lookupText: { color: '#215da1', fontWeight: '900', fontSize: 14 },
+
+  matchBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
+    alignSelf: 'flex-start', marginBottom: 14,
+  },
+  hintGreen: { color: '#137333', fontWeight: '700', fontSize: 13 },
+  hintMuted: { color: colors.mutedText, marginBottom: 12, fontSize: 13, lineHeight: 18 },
+
   photoRow: { flexDirection: 'row', gap: 14, marginBottom: 14, alignItems: 'center' },
-  photo: { width: 96, height: 96, borderRadius: 18, backgroundColor: '#dbeafe' },
-  photoPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderWidth: 1,
-    borderColor: colors.outline,
+  photoCircle: {
+    width: 86,
+    height: 86,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#4A90E2',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eaf3ff',
+    overflow: 'hidden',
   },
-  photoActions: { flex: 1, gap: 8 },
-  mt8: { marginTop: 0 },
+  photoIcon: { width: 86, height: 86 },
+  photoPlaceholder: { alignItems: 'center', gap: 4 },
+  photoHint: { color: '#4A90E2', fontSize: 11, fontWeight: '700', textAlign: 'center' },
+
+  grid2: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 4 },
+  grid3: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 16 },
+  half: { flex: 1 },
+  third: { flex: 1 },
   segment: { marginBottom: 14 },
+
+  hrsPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 11,
+    justifyContent: 'center',
+  },
+  hrsValue: { color: '#1d4ed8', fontWeight: '900', fontSize: 15 },
+
+  /* Photo modal */
+  modalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.40)',
+    justifyContent: 'flex-end',
+  },
+  photoModalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+  },
+  photoModalTitle: { fontSize: 18, fontWeight: '900', color: '#1a2f4e', marginBottom: 16 },
+  photoOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 12,
+  },
+  photoOptionIcon: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  photoOptionMeta: { flex: 1 },
+  photoOptionTitle: { fontSize: 15, fontWeight: '800', color: '#1a2f4e' },
+  photoOptionDesc: { fontSize: 12, color: colors.mutedText, marginTop: 2 },
+  divider: { height: 1, backgroundColor: '#f1f5f9', marginVertical: 4 },
+  cancelBtn: {
+    marginTop: 16, alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+  },
+  cancelText: { color: '#ef4444', fontWeight: '800', fontSize: 15 },
 });
