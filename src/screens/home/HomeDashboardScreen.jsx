@@ -61,7 +61,7 @@ export default function HomeDashboardScreen({ navigation }) {
 
       {/* ── HERO HEADER ── */}
       <ImageBackground
-        source={require('../../../assets/construction1.jpg')}
+        source={require('../../../assets/sruthika_final_logo.png')}
         style={styles.hero}
         resizeMode="cover"
       >
@@ -69,7 +69,7 @@ export default function HomeDashboardScreen({ navigation }) {
 
         <View style={styles.heroBody}>
           <Text style={styles.heroTitle}>My Dashboard</Text>
-          <Text style={styles.heroSub}>📍 Monday, 1 June</Text>
+          <Text style={styles.heroSub}>Have a Good Day</Text>
         </View>
 
         <View style={styles.heroWave} />

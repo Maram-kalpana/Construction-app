@@ -1,12 +1,22 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
+import { Image, StyleSheet } from 'react-native';
 
 import { ProfileScreen } from '../../screens/profile/ProfileScreen';
 import { SettingsScreen } from '../../screens/settings/SettingsScreen';
 import { HomeStack } from '../home/HomeStack';
 
 const Tab = createBottomTabNavigator();
+
+// ── Reusable logo component for header right ──
+const HeaderLogo = () => (
+  <Image
+    source={require('../../../assets/sruthika_final_logo.png')}
+    style={styles.headerLogo}
+    resizeMode="contain"
+  />
+);
 
 export function AppTabs() {
   return (
@@ -40,6 +50,7 @@ export function AppTabs() {
           headerStyle: { backgroundColor: '#0b1213' },
           headerTintColor: '#e9f2f2',
           title: 'Profile',
+          headerRight: () => <HeaderLogo />,
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="account-circle" color={color} size={size} />,
         }}
       />
@@ -51,9 +62,18 @@ export function AppTabs() {
           headerStyle: { backgroundColor: '#0b1213' },
           headerTintColor: '#e9f2f2',
           title: 'Settings',
+          headerRight: () => <HeaderLogo />,
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="cog" color={color} size={size} />,
         }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLogo: {
+    width: 72,
+    height: 36,
+    marginRight: 4,
+  },
+});

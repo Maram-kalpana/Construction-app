@@ -20,8 +20,12 @@ export const colors = {
   outline: 'rgba(77, 135, 196, 0.18)',
 };
 
+// 🔥 GLOBAL FONT SCALE (change here anytime)
+const FONT_SCALE = 1.3;
+
 export const paperTheme = {
   ...MD3LightTheme,
+
   colors: {
     ...MD3LightTheme.colors,
     primary: colors.buttonStart,
@@ -34,5 +38,37 @@ export const paperTheme = {
     onSurfaceVariant: colors.mutedText,
     onPrimary: '#ffffff',
     onBackground: colors.text,
+  },
+
+  // ✅ 🔥 ADD THIS BLOCK (IMPORTANT)
+  fonts: {
+    ...MD3LightTheme.fonts,
+
+    bodyLarge: {
+      ...MD3LightTheme.fonts.bodyLarge,
+      fontSize: 16 * FONT_SCALE,
+    },
+    bodyMedium: {
+      ...MD3LightTheme.fonts.bodyMedium,
+      fontSize: 14 * FONT_SCALE,
+    },
+    bodySmall: {
+      ...MD3LightTheme.fonts.bodySmall,
+      fontSize: 12 * FONT_SCALE,
+    },
+
+    titleLarge: {
+      ...MD3LightTheme.fonts.titleLarge,
+      fontSize: 20 * FONT_SCALE,
+    },
+    titleMedium: {
+      ...MD3LightTheme.fonts.titleMedium,
+      fontSize: 18 * FONT_SCALE,
+    },
+
+    labelLarge: {
+      ...MD3LightTheme.fonts.labelLarge,
+      fontSize: 14 * FONT_SCALE,
+    },
   },
 };

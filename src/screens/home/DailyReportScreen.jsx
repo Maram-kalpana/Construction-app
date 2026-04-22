@@ -7,10 +7,10 @@ import {
   View,
   Pressable,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
-import { colors } from '../../theme/theme';
 
 export function DailyReportScreen() {
   const {
@@ -24,7 +24,6 @@ export function DailyReportScreen() {
   const [showMachine, setShowMachine] = useState(false);
   const [showMaterial, setShowMaterial] = useState(false);
 
-  // ✅ FILTER DATA BASED ON DATE
   const labourData = labourEntries.filter((l) => l.date === date);
   const machineData = machineEntries.filter((m) => m.date === date);
   const materialData = materialEntries.filter((m) => m.date === date);
@@ -35,7 +34,6 @@ export function DailyReportScreen() {
 
         <Text style={styles.title}>DAILY PROGRESS REPORT</Text>
 
-        {/* INPUTS */}
         <TextInput style={styles.input} placeholder="Site Name" />
         <TextInput style={styles.input} placeholder="Supervisor Name" />
         <TextInput
@@ -46,91 +44,115 @@ export function DailyReportScreen() {
         />
 
         {/* LABOUR */}
-        <Pressable style={styles.card} onPress={() => setShowLabour(!showLabour)}>
+        <Pressable style={styles.card} onPress={() => setShowLabour(true)}>
           <Text style={styles.cardTitle}>Labour</Text>
         </Pressable>
 
-        {showLabour && (
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>LABOUR DETAILS</Text>
+        <Modal visible={showLabour} transparent animationType="slide">
+          <View style={styles.bottomOverlay}>
+            <View style={styles.bottomSheet}>
+              <Text style={styles.sheetTitle}>LABOUR DETAILS</Text>
 
-            <View style={styles.rowHeader}>
-              <Text style={styles.col}>Party</Text>
-              <Text style={styles.col}>M</Text>
-              <Text style={styles.col}>F</Text>
-              <Text style={styles.col}>Work</Text>
-              <Text style={styles.col}>Action</Text>
-            </View>
-
-            {labourData.map((item, i) => (
-              <View key={i} style={styles.row}>
-                <Text style={styles.col}>{item.partyName}</Text>
-                <Text style={styles.col}>{item.male}</Text>
-                <Text style={styles.col}>{item.female}</Text>
-                <Text style={styles.col}>{item.work}</Text>
-                <Text style={styles.col}>-</Text>
+              <View style={styles.rowHeader}>
+                <Text style={styles.col}>Party</Text>
+                <Text style={styles.col}>M</Text>
+                <Text style={styles.col}>F</Text>
+                <Text style={styles.col}>Work</Text>
+                <Text style={styles.col}>Action</Text>
               </View>
-            ))}
+
+              <ScrollView>
+                {labourData.map((item, i) => (
+                  <View key={i} style={styles.row}>
+                    <Text style={styles.col}>{item.partyName}</Text>
+                    <Text style={styles.col}>{item.male}</Text>
+                    <Text style={styles.col}>{item.female}</Text>
+                    <Text style={styles.col}>{item.work}</Text>
+                    <Text style={styles.col}>-</Text>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <Pressable style={styles.closeBtn} onPress={() => setShowLabour(false)}>
+                <Text style={styles.closeText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
+        </Modal>
 
         {/* MACHINE */}
-        <Pressable style={styles.card} onPress={() => setShowMachine(!showMachine)}>
+        <Pressable style={styles.card} onPress={() => setShowMachine(true)}>
           <Text style={styles.cardTitle}>Machinery</Text>
         </Pressable>
 
-        {showMachine && (
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>MACHINE DETAILS</Text>
+        <Modal visible={showMachine} transparent animationType="slide">
+          <View style={styles.bottomOverlay}>
+            <View style={styles.bottomSheet}>
+              <Text style={styles.sheetTitle}>MACHINE DETAILS</Text>
 
-            <View style={styles.rowHeader}>
-              <Text style={styles.col}>Name</Text>
-              <Text style={styles.col}>Start</Text>
-              <Text style={styles.col}>Close</Text>
-              <Text style={styles.col}>Hrs</Text>
-              <Text style={styles.col}>Work</Text>
-              <Text style={styles.col}>Action</Text>
-            </View>
-
-            {machineData.map((item, i) => (
-              <View key={i} style={styles.row}>
-                <Text style={styles.col}>{item.name}</Text>
-                <Text style={styles.col}>{item.start}</Text>
-                <Text style={styles.col}>{item.close}</Text>
-                <Text style={styles.col}>{item.hours}</Text>
-                <Text style={styles.col}>{item.work}</Text>
-                <Text style={styles.col}>-</Text>
+              <View style={styles.rowHeader}>
+                <Text style={styles.col}>Name</Text>
+                <Text style={styles.col}>Start</Text>
+                <Text style={styles.col}>Close</Text>
+                <Text style={styles.col}>Hrs</Text>
+                <Text style={styles.col}>Work</Text>
+                <Text style={styles.col}>Action</Text>
               </View>
-            ))}
+
+              <ScrollView>
+                {machineData.map((item, i) => (
+                  <View key={i} style={styles.row}>
+                    <Text style={styles.col}>{item.name}</Text>
+                    <Text style={styles.col}>{item.start}</Text>
+                    <Text style={styles.col}>{item.close}</Text>
+                    <Text style={styles.col}>{item.hours}</Text>
+                    <Text style={styles.col}>{item.work}</Text>
+                    <Text style={styles.col}>-</Text>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <Pressable style={styles.closeBtn} onPress={() => setShowMachine(false)}>
+                <Text style={styles.closeText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
+        </Modal>
 
         {/* MATERIAL */}
-        <Pressable style={styles.card} onPress={() => setShowMaterial(!showMaterial)}>
+        <Pressable style={styles.card} onPress={() => setShowMaterial(true)}>
           <Text style={styles.cardTitle}>Materials</Text>
         </Pressable>
 
-        {showMaterial && (
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>MATERIAL DETAILS</Text>
+        <Modal visible={showMaterial} transparent animationType="slide">
+          <View style={styles.bottomOverlay}>
+            <View style={styles.bottomSheet}>
+              <Text style={styles.sheetTitle}>MATERIAL DETAILS</Text>
 
-            <View style={styles.rowHeader}>
-              <Text style={styles.col}>Item</Text>
-              <Text style={styles.col}>Qty</Text>
-              <Text style={styles.col}>Action</Text>
-            </View>
-
-            {materialData.map((item, i) => (
-              <View key={i} style={styles.row}>
-                <Text style={styles.col}>{item.item}</Text>
-                <Text style={styles.col}>{item.qty}</Text>
-                <Text style={styles.col}>-</Text>
+              <View style={styles.rowHeader}>
+                <Text style={styles.col}>Item</Text>
+                <Text style={styles.col}>Qty</Text>
+                <Text style={styles.col}>Action</Text>
               </View>
-            ))}
-          </View>
-        )}
 
-        {/* SAVE BUTTON */}
+              <ScrollView>
+                {materialData.map((item, i) => (
+                  <View key={i} style={styles.row}>
+                    <Text style={styles.col}>{item.item}</Text>
+                    <Text style={styles.col}>{item.qty}</Text>
+                    <Text style={styles.col}>-</Text>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <Pressable style={styles.closeBtn} onPress={() => setShowMaterial(false)}>
+                <Text style={styles.closeText}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* SAVE */}
         <Pressable style={styles.saveBtn}>
           <Text style={styles.saveText}>Save Report</Text>
         </Pressable>
@@ -174,13 +196,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  sheet: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-  },
-
   sheetTitle: {
     fontWeight: '900',
     marginBottom: 10,
@@ -214,5 +229,33 @@ const styles = StyleSheet.create({
   saveText: {
     color: '#fff',
     fontWeight: '800',
+  },
+
+  /* ✅ BOTTOM SHEET STYLES */
+  bottomOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+
+  bottomSheet: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '75%',
+  },
+
+  closeBtn: {
+    marginTop: 12,
+    backgroundColor: '#2563eb',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+
+  closeText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });

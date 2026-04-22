@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   StyleSheet, Text, View, ScrollView,
-  TouchableOpacity, Switch, Platform, Image, Alert
+  TouchableOpacity, Platform, Image, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,13 +11,8 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
-  const [locationEnabled, setLocationEnabled] = useState(false);
-  const [activitiesEnabled, setActivitiesEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(false);
-  const [touchIDEnabled, setTouchIDEnabled] = useState(true);
   const [photoUri, setPhotoUri] = useState(null);
 
-  // ── hide the navigator header so we don't get double "Profile" ──
   React.useLayoutEffect(() => {
     navigation?.setOptions?.({ headerShown: false });
   }, [navigation]);
@@ -39,29 +34,26 @@ export function ProfileScreen({ navigation }) {
     }
   };
 
-  const Row = ({ icon, label, sub, toggle, value, onToggle, onPress }) => (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={toggle ? 1 : 0.7}>
+  const Row = ({ icon, label, value, onPress, isAction }) => (
+    <TouchableOpacity
+      style={styles.row}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
       <View style={styles.rowIcon}>
         <MaterialCommunityIcons name={icon} size={20} color="#4A90E2" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowLabel}>{label}</Text>
-        {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       </View>
-      {toggle
-        ? <Switch
-            value={value}
-            onValueChange={onToggle}
-            trackColor={{ false: '#ddd', true: '#4CD964' }}
-            thumbColor="#fff"
-          />
-        : <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
-      }
+      {isAction && (
+        <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
+      )}
     </TouchableOpacity>
   );
 
   return (
-    // edges={['top']} so SafeAreaView only pads the status bar, no bottom gap
     <SafeAreaView style={styles.root} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
 
@@ -72,13 +64,11 @@ export function ProfileScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
-          {/* back + title row */}
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack?.()}>
             <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
             <Text style={styles.backText}>Profile</Text>
           </TouchableOpacity>
 
-          {/* avatar with camera badge */}
           <View style={styles.avatarArea}>
             <TouchableOpacity style={styles.avatarWrap} onPress={pickPhoto} activeOpacity={0.85}>
               {photoUri ? (
@@ -88,7 +78,6 @@ export function ProfileScreen({ navigation }) {
                   <MaterialCommunityIcons name="account-hard-hat" size={40} color="#4A90E2" />
                 </View>
               )}
-              {/* camera badge */}
               <View style={styles.cameraBadge}>
                 <MaterialCommunityIcons name="camera" size={13} color="#fff" />
               </View>
@@ -96,47 +85,31 @@ export function ProfileScreen({ navigation }) {
           </View>
         </LinearGradient>
 
-        {/* ── NAME ── */}
+        {/* ── NAME & ROLE ── */}
         <View style={styles.nameBlock}>
           <Text style={styles.name}>{user?.name ?? 'Site Manager'}</Text>
           <Text style={styles.roleText}>{user?.role === 'manager' ? 'Site Manager' : user?.role ?? ''}</Text>
         </View>
 
-        {/* ── PROFILE SECTION ── */}
-        <Text style={styles.sectionLabel}>PROFILE</Text>
-        <View style={styles.section}>
-          <Row icon="account-outline" label="Account details" onPress={() => {}} />
-          <View style={styles.divider} />
-          <Row icon="file-document-outline" label="Documents" onPress={() => {}} />
-          <View style={styles.divider} />
-          <Row
-            icon="map-marker-outline"
-            label="Turn your location"
-            sub="This will improve lots of things"
-            toggle value={locationEnabled} onToggle={setLocationEnabled}
-          />
-        </View>
-
-        {/* ── BANK DETAIL ── */}
-        <Text style={styles.sectionLabel}>BANK DETAIL</Text>
-        <View style={styles.section}>
-          <Row icon="bank-outline" label="Bank Account" onPress={() => {}} />
-        </View>
-
-        {/* ── NOTIFICATIONS ── */}
-        <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+        {/* ── ACCOUNT INFO ── */}
+        <Text style={styles.sectionLabel}>ACCOUNT INFO</Text>
         <View style={styles.section}>
           <Row
-            icon="chart-bar"
-            label="Activities notifications"
-            sub="Payment Success, Failed and other activities"
-            toggle value={activitiesEnabled} onToggle={setActivitiesEnabled}
+            icon="account-outline"
+            label="Name"
+            value={user?.name ?? 'Site Manager'}
           />
           <View style={styles.divider} />
           <Row
-            icon="send-outline"
-            label="Email notification"
-            toggle value={emailEnabled} onToggle={setEmailEnabled}
+            icon="badge-account-outline"
+            label="User ID"
+            value={user?.username ?? user?.id ?? '—'}
+          />
+          <View style={styles.divider} />
+          <Row
+            icon="lock-outline"
+            label="Password"
+            value="••••••••"
           />
         </View>
 
@@ -144,12 +117,11 @@ export function ProfileScreen({ navigation }) {
         <Text style={styles.sectionLabel}>SECURITY</Text>
         <View style={styles.section}>
           <Row
-            icon="fingerprint"
-            label="Sign in with touch ID"
-            toggle value={touchIDEnabled} onToggle={setTouchIDEnabled}
+            icon="lock-reset"
+            label="Change Password"
+            isAction
+            onPress={() => Alert.alert('Change Password', 'Feature coming soon.')}
           />
-          <View style={styles.divider} />
-          <Row icon="lock-outline" label="Change password" onPress={() => {}} />
         </View>
 
         {/* ── LOGOUT ── */}
@@ -170,11 +142,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f7fb',
   },
 
-  // ── HERO ──
   hero: {
     paddingTop: 14,
     paddingHorizontal: 20,
-    paddingBottom: 50,        // extra bottom so avatar overlaps nicely
+    paddingBottom: 50,
   },
 
   backBtn: {
@@ -201,7 +172,7 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     borderWidth: 3,
     borderColor: '#fff',
-    overflow: 'visible',      // let badge peek out
+    overflow: 'visible',
 
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.2)' }
@@ -243,7 +214,6 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
 
-  // ── NAME ──
   nameBlock: {
     alignItems: 'center',
     marginTop: 14,
@@ -262,7 +232,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  // ── SECTIONS ──
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -309,14 +278,17 @@ const styles = StyleSheet.create({
   },
 
   rowLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#1f2f4b',
+    color: '#9baabb',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
-  rowSub: {
-    fontSize: 11,
-    color: '#9baabb',
+  rowValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1f2f4b',
     marginTop: 2,
   },
 
@@ -326,7 +298,6 @@ const styles = StyleSheet.create({
     marginLeft: 66,
   },
 
-  // ── LOGOUT ──
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { Image, StyleSheet } from 'react-native';
 
 import { AccountsDashboardScreen } from '../../screens/accounts/AccountsDashboardScreen';
 import { AccountsProjectListScreen } from '../../screens/accounts/AccountsProjectListScreen';
@@ -7,7 +8,7 @@ import { AddExpenseScreen } from '../../screens/accounts/AddExpenseScreen';
 import { ExpenseDetailsScreen } from '../../screens/accounts/ExpenseDetailsScreen';
 import { ExpenseListScreen } from '../../screens/accounts/ExpenseListScreen';
 import { DailyReportScreen } from '../../screens/home/DailyReportScreen';
-import  HomeDashboardScreen  from '../../screens/home/HomeDashboardScreen';
+import HomeDashboardScreen from '../../screens/home/HomeDashboardScreen';
 import { LabourFormScreen } from '../../screens/modules/LabourFormScreen';
 import { LabourListScreen } from '../../screens/modules/LabourListScreen';
 import { LabourModuleScreen } from '../../screens/modules/LabourModuleScreen';
@@ -24,11 +25,21 @@ import { VendorsListScreen } from '../../screens/vendors/VendorsListScreen';
 
 const Stack = createNativeStackNavigator();
 
+// ── Reusable logo component for header right ──
+const HeaderLogo = () => (
+  <Image
+    source={require('../../../assets/sruthika_final_logo.png')}
+    style={styles.headerLogo}
+    resizeMode="contain"
+  />
+);
+
 const screenOptions = {
   headerStyle: { backgroundColor: '#ffffff' },
   headerTintColor: '#17324f',
   contentStyle: { backgroundColor: '#e9f5ff' },
   headerShadowVisible: false,
+  headerRight: () => <HeaderLogo />,
 };
 
 export function HomeStack() {
@@ -57,3 +68,11 @@ export function HomeStack() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLogo: {
+    width: 72,
+    height: 36,
+    marginRight: 4,
+  },
+});

@@ -13,6 +13,7 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,18 +57,25 @@ export default function LoginScreen() {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={[styles.screen, { paddingTop: insets.top }]}>
 
-              {/* ── TOP BADGE ── */}
-              <View style={styles.topBadge}>
-                <Text style={styles.topTitle}>LOGIN</Text>
-                <Text style={styles.topSub}>TO CONTINUE</Text>
-              </View>
+             <View style={styles.logoContainer}>
+  <Image
+    source={require('../../../assets/sruthika_final_logo.png')}
+    style={styles.centerLogo}
+    resizeMode="contain"
+  />
 
-              {/* ── GLASS CARD (no expo-blur) ── */}
-              <View style={styles.glassCard}>
+  <Text style={styles.logoText}>
+    SRUTHIKA CONSTRUCTIONS
+  </Text>
+</View>
+
+              {/* ── WHITE CARD ── */}
+              <View style={styles.whiteCard}>
 
                 <View style={styles.titleWrapper}>
-                  <Text style={styles.title}>Sign in</Text>
+                  <Text style={styles.title}>Sign In</Text>
                   <View style={styles.titleUnderline} />
+                  <Text style={styles.subtitle}>Welcome back! Please login to continue.</Text>
                 </View>
 
                 <Text style={styles.label}>Username</Text>
@@ -77,7 +85,7 @@ export default function LoginScreen() {
                     value={username}
                     onChangeText={setUsername}
                     placeholder="Enter username"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor="rgba(0,0,0,0.3)"
                     style={styles.input}
                     autoCapitalize="none"
                     returnKeyType="next"
@@ -91,7 +99,7 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={setPassword}
                     placeholder="Enter password"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor="rgba(0,0,0,0.3)"
                     secureTextEntry={secure}
                     style={styles.input}
                     returnKeyType="done"
@@ -101,7 +109,7 @@ export default function LoginScreen() {
                     <MaterialCommunityIcons
                       name={secure ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color="rgba(255,255,255,0.4)"
+                      color="rgba(0,0,0,0.35)"
                     />
                   </TouchableOpacity>
                 </View>
@@ -159,62 +167,89 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,22,40,0.58)',
+    backgroundColor: 'rgba(10,22,40,0.60)',
   },
 
   screen: {
     flex: 1,
     paddingHorizontal: 20,
+    justifyContent: 'center',
   },
 
-  topBadge: {
+  // ── Header Row ──
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 36,
+    justifyContent: 'space-between',
     marginBottom: 28,
+    paddingHorizontal: 4,
+    minHeight: 140,
   },
 
-  topTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 8,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+  welcomeTextBlock: {
+    flex: 1.4,
+    justifyContent: 'center',
+    paddingRight: 10,
+  },
+
+  welcomeLine1: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.72)',
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+
+  welcomeLine2: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#1B2A6B',
+    letterSpacing: -0.5,
+    lineHeight: 46,
+    textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
   },
 
-  topSub: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 5,
-    marginTop: 4,
+  welcomeLine3: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1B2A6B',
+    letterSpacing: 0.3,
+    lineHeight: 32,
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
 
-  // ── glass card — no expo-blur needed ──
-  glassCard: {
+  logo: {
+    width: 140,
+    height: 140,
+    flexShrink: 0,
+  },
+
+  // ── White Card ──
+  whiteCard: {
     borderRadius: 22,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.20)',
-    backgroundColor: 'rgba(12,30,65,0.68)',   // dark navy glass
-    padding: 24,
-    // subtle inner highlight at top edge
-    shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
+    backgroundColor: '#ffffff',
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 14,
   },
 
   titleWrapper: {
-    marginBottom: 22,
+    marginBottom: 24,
   },
 
   title: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: '#1A2A4A',
     letterSpacing: -0.5,
   },
 
@@ -223,12 +258,19 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: '#e85757',
     marginTop: 6,
+    marginBottom: 8,
     borderRadius: 2,
+  },
+
+  subtitle: {
+    fontSize: 13,
+    color: 'rgba(0,0,0,0.45)',
+    fontWeight: '400',
   },
 
   label: {
     marginBottom: 5,
-    color: 'rgba(255,255,255,0.55)',
+    color: '#1A2A4A',
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -238,8 +280,8 @@ const styles = StyleSheet.create({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.22)',
+    borderBottomWidth: 1.5,
+    borderBottomColor: 'rgba(0,0,0,0.12)',
     marginBottom: 18,
     paddingBottom: 8,
   },
@@ -248,7 +290,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
-    color: '#fff',
+    color: '#1A2A4A',
     fontWeight: '500',
   },
 
@@ -280,7 +322,7 @@ const styles = StyleSheet.create({
   },
 
   remember: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.55)',
     fontSize: 13,
   },
 
@@ -305,7 +347,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     shadowColor: '#4A90E2',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.35,
     shadowRadius: 14,
     elevation: 8,
   },
@@ -329,7 +371,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
 
   dotActive: {
@@ -338,4 +380,24 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  logoContainer: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 10,   // reduced space below
+  marginTop: -40,     // moves logo upward
+},
+
+centerLogo: {
+  width: 240,   // increased width
+  height: 180,
+},
+
+logoText: {
+    // 🔼 move text upward (reduce space)
+  fontSize: 20,          // 🔼 slightly bigger text
+  fontWeight: '800',
+  color: 'rgb(255, 255, 255)',
+  letterSpacing: 6,      // 🔼 increases width (spreads letters)
+  textAlign: 'center',   // keep centered
+},
 });
