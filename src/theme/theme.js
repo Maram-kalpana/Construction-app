@@ -21,7 +21,7 @@ export const colors = {
 };
 
 // 🔥 GLOBAL FONT SCALE (change here anytime)
-const FONT_SCALE = 1.3;
+const FONT_SCALE = 1;
 
 export const paperTheme = {
   ...MD3LightTheme,
@@ -42,33 +42,33 @@ export const paperTheme = {
 
   // ✅ 🔥 ADD THIS BLOCK (IMPORTANT)
   fonts: {
-    ...MD3LightTheme.fonts,
+  ...MD3LightTheme.fonts,
 
-    bodyLarge: {
-      ...MD3LightTheme.fonts.bodyLarge,
-      fontSize: 16 * FONT_SCALE,
-    },
-    bodyMedium: {
-      ...MD3LightTheme.fonts.bodyMedium,
-      fontSize: 14 * FONT_SCALE,
-    },
-    bodySmall: {
-      ...MD3LightTheme.fonts.bodySmall,
-      fontSize: 12 * FONT_SCALE,
-    },
-
-    titleLarge: {
-      ...MD3LightTheme.fonts.titleLarge,
-      fontSize: 20 * FONT_SCALE,
-    },
-    titleMedium: {
-      ...MD3LightTheme.fonts.titleMedium,
-      fontSize: 18 * FONT_SCALE,
-    },
-
-    labelLarge: {
-      ...MD3LightTheme.fonts.labelLarge,
-      fontSize: 14 * FONT_SCALE,
-    },
+  bodyLarge: {
+    ...MD3LightTheme.fonts.bodyLarge,
+    fontSize: 16,
   },
+  bodyMedium: {
+    ...MD3LightTheme.fonts.bodyMedium,
+    fontSize: 14,
+  },
+  bodySmall: {
+    ...MD3LightTheme.fonts.bodySmall,
+    fontSize: 12,
+  },
+
+  titleLarge: {
+    ...MD3LightTheme.fonts.titleLarge,
+    fontSize: 20,
+  },
+  titleMedium: {
+    ...MD3LightTheme.fonts.titleMedium,
+    fontSize: 18,
+  },
+
+  labelLarge: {
+    ...MD3LightTheme.fonts.labelLarge,
+    fontSize: 13,
+  },
+}
 };

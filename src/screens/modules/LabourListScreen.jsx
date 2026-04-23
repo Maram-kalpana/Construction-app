@@ -31,6 +31,7 @@ export function LabourListScreen({ route, navigation }) {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [phone, setPhone] = useState('');
+  const [dailyWage, setDailyWage] = useState('');
   const [gender, setGender] = useState('male');
   const [vendorId, setVendorId] = useState(null);
   const [photoUri, setPhotoUri] = useState(null);
@@ -112,11 +113,20 @@ export function LabourListScreen({ route, navigation }) {
           )}
         </View>
 
-        {/* Name + phone */}
-        <View style={[styles.cell, styles.colName]}>
-          <Text style={styles.name} numberOfLines={1}>{item.name || '—'}</Text>
-          <Text style={styles.phone}>{item.phone || ''}</Text>
-        </View>
+       {/* Name + phone + wages */}
+<View style={[styles.cell, styles.colName]}>
+  <Text style={styles.name} numberOfLines={1}>
+    {item.name || '—'}
+  </Text>
+
+  <Text style={styles.phone}>
+    {item.phone || ''}
+  </Text>
+
+  <Text style={styles.wage}>
+    ₹ {item.dailyWage || '0'}
+  </Text>
+</View>
 
         {/* Vendor */}
         <View style={[styles.cell, styles.colVendor]}>
@@ -270,24 +280,40 @@ export function LabourListScreen({ route, navigation }) {
                 )}
               </Pressable>
 
-              {/* Name + Phone stacked next to photo */}
-              <View style={styles.namePhoneCol}>
-                <AppTextField
-                  label="Full Name"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Enter full name"
-                />
-                <AppTextField
-                  label="Phone Number"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  placeholder="Phone number"
-                />
-              </View>
-            </View>
+              
+    
+ 
 
+  <View style={{ flex: 1 }}>
+    <AppTextField
+      label="Full Name"
+      value={name}
+      onChangeText={setName}
+      placeholder="Enter full name"
+    />
+  </View>
+</View>
+
+{/* ── Phone + Daily Wages ── */}
+<View style={styles.grid2}>
+  <AppTextField
+    style={styles.half}
+    label="Phone Number"
+    value={phone}
+    onChangeText={setPhone}
+    keyboardType="phone-pad"
+    placeholder="Phone number"
+  />
+
+  <AppTextField
+    style={styles.half}
+    label="Daily Wages"
+    value={dailyWage}
+    onChangeText={setDailyWage}
+    keyboardType="numeric"
+    placeholder="₹ Amount"
+  />
+</View>
             {/* ── Age + Gender ── */}
             <View style={styles.grid2}>
               <AppTextField

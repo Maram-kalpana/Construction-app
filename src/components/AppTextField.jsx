@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
     color: '#24476d',
-    fontSize: 25,
+    fontSize: 15,
     fontWeight: '800',
   },
   input: {
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     color: '#17324f',
-    fontSize: 60,
+    fontSize: 14,
     fontWeight: '600',
   },
   multiline: {

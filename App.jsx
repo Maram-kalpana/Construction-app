@@ -22,14 +22,7 @@ Text.render = function (...args) {
   });
 };
 
-// ✅ Override TextInput globally
-const oldTextInputRender = TextInput.render;
-TextInput.render = function (...args) {
-  const origin = oldTextInputRender.call(this, ...args);
-  return React.cloneElement(origin, {
-    style: [{ fontSize: 15 * FONT_SCALE }, origin.props.style],
-  });
-};
+
 
 
 export default function App() {
