@@ -20,10 +20,12 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import { getLabours } from "../../api/labourApi";
+import { addLabour } from "../../api/labourApi";
 
 export function LabourListScreen({ route, navigation }) {
   const { projectId, vendorId: filterVendorId, date: routeDate } = route.params || {};
-  const { labourRegistry, vendors, dateKey, toggleAttendance, attendanceFor, upsertLabourPerson } = useApp();
+  const { vendors, dateKey, toggleAttendance, attendanceFor } = useApp();
 
   const today = dateKey();
   const [search, setSearch] = useState('');
@@ -37,23 +39,29 @@ export function LabourListScreen({ route, navigation }) {
   const [photoUri, setPhotoUri] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [labours, setLabours] = useState([]);
+const [loading, setLoading] = useState(false);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return labourRegistry.filter((p) => !filterVendorId || p.vendorId === filterVendorId);
-    const q = search.toLowerCase();
-    return labourRegistry.filter((p) => {
-      const searchHit =
-        p.name?.toLowerCase().includes(q) ||
-        p.phone?.includes(q) ||
-        (vendors.find((v) => v.id === p.vendorId)?.name || '').toLowerCase().includes(q);
-      return (!filterVendorId || p.vendorId === filterVendorId) && searchHit;
-    });
-  }, [filterVendorId, labourRegistry, search, vendors]);
+  if (!search.trim()) {
+    return labours.filter(
+      (p) => !filterVendorId || p.vendorId === filterVendorId
+    );
+  }
 
-  const presentCount = labourRegistry.filter(
-    (p) => attendanceFor?.(projectId, selectedDate, p.id),
-  ).length;
+  const q = search.toLowerCase();
 
+  return labours.filter((p) => {
+    const searchHit =
+      p.name?.toLowerCase().includes(q) ||
+      p.phone?.includes(q) ||
+      (vendors.find((v) => v.id === p.vendorId)?.name || '')
+        .toLowerCase()
+        .includes(q);
+
+    return (!filterVendorId || p.vendorId === filterVendorId) && searchHit;
+  });
+}, [filterVendorId, labours, search, vendors]);
   // ── Camera ──
   const openCamera = async () => {
     setShowPhotoModal(false);
@@ -163,6 +171,9 @@ export function LabourListScreen({ route, navigation }) {
       </View>
     );
   };
+  const presentCount = labours.filter(
+  (p) => attendanceFor?.(projectId, selectedDate, p.id)
+).length;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -226,7 +237,7 @@ export function LabourListScreen({ route, navigation }) {
     <View style={styles.badge}>
       <MaterialCommunityIcons name="account-check" size={15} color="#137333" />
       <Text style={styles.badgeText}>
-        Present: {presentCount} / {labourRegistry.length}
+        Present: {presentCount} / {labours.length}
       </Text>
     </View>
 
@@ -339,7 +350,7 @@ export function LabourListScreen({ route, navigation }) {
 
             {/* ── Date + Vendor ── */}
             <View style={styles.grid2}>
-              <DatePickerField style={styles.half} label="Date" value={selectedDate} onChange={setSelectedDate} />
+              <DatePickerField style={styles.half} label="Effective Date" value={selectedDate} onChange={setSelectedDate} />
               <SelectField
                 style={styles.half}
                 label="Vendor"
@@ -357,10 +368,24 @@ export function LabourListScreen({ route, navigation }) {
             <Pressable
               style={styles.saveBtn}
               onPress={async () => {
-                if (!name.trim() || !phone.trim()) return;
-                await upsertLabourPerson({ name, age, gender, phone, photoUri, vendorId, joinedDate: selectedDate });
-                resetModal();
-              }}
+  if (!name.trim() || !phone.trim()) return;
+
+  try {
+    await addLabour({
+      full_name: name,
+      age: Number(age),
+      gender: gender,
+      phone: phone,
+      vendor_id: vendorId,
+    });
+
+    fetchLabours();   // 🔥 refresh list
+    resetModal();
+
+  } catch (err) {
+    console.log("Add labour error:", err.response?.data || err.message);
+  }
+}}
             >
               <MaterialCommunityIcons name="content-save" size={17} color="#fff" />
               <Text style={styles.saveText}>Save Labour</Text>

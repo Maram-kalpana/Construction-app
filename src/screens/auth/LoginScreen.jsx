@@ -18,6 +18,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 const { height, width } = Dimensions.get('window');
 

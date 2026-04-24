@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo } from 'react';
+import React, { useMemo,useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PressableCard } from '../../components/PressableCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import { getProjectById } from "../../api/projectApi";
 
 const modules = [
   { key: 'LabourModule', title: 'Labour', subtitle: 'Add labour and view daily labour report', icon: 'account-hard-hat' },
@@ -16,9 +17,29 @@ const modules = [
 
 export function ProjectModulesScreen({ route, navigation }) {
   const { projectId } = route.params;
-  const { projects } = useApp();
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
+  const [project, setProject] = useState(null);
+const [loading, setLoading] = useState(false);useEffect(() => {
+  fetchProject();
+}, []);
 
+const fetchProject = async () => {
+  try {
+    setLoading(true);
+
+    const res = await getProjectById(projectId);
+
+    console.log("API RESPONSE:", res.data);
+
+    const data = res?.data?.data;
+
+    setProject(data);
+
+  } catch (err) {
+    console.log("Project API error:", err.response?.data || err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -33,7 +54,13 @@ export function ProjectModulesScreen({ route, navigation }) {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Status</Text>
-            <Text style={styles.detailValue}>{project?.status ?? '—'}</Text>
+            <Text style={styles.detailValue}>
+  {Number(project?.status) === 0
+    ? "Active"
+    : Number(project?.status) === 1
+    ? "Completed"
+    : "—"}
+</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Location</Text>

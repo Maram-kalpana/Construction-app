@@ -1,33 +1,71 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import { getProjects } from "../../api/projectApi";
 
 export function ProjectsListScreen({ navigation }) {
-  const { projects } = useApp();
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+
+      const res = await getProjects();
+
+      const data = res?.data?.data || [];
+      setProjects(data);
+
+    } catch (err) {
+      console.log("Project API error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <View style={styles.container}>
+
+        {loading && (
+          <Text style={{ textAlign: 'center', marginTop: 20 }}>
+            Loading projects...
+          </Text>
+        )}
+
         <FlatList
           data={projects}
-          keyExtractor={(p) => p.id}
+          keyExtractor={(p) => p.id?.toString()}
           contentContainerStyle={styles.list}
+
           renderItem={({ item }) => (
-            <Pressable onPress={() => navigation.navigate('ProjectModules', { projectId: item.id })} style={styles.card}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('ProjectModules', { projectId: item.id })
+              }
+              style={styles.card}
+            >
               <View style={styles.row}>
                 <View style={styles.iconWrap}>
                   <MaterialCommunityIcons name="office-building" size={22} color="#1d78d8" />
                 </View>
+
                 <View style={styles.meta}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.sub}>{item.location}</Text>
                 </View>
+
                 <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>{item.status}</Text>
+                  <Text style={styles.statusText}>
+                    {item.status === 0 ? "Active" : "Completed"}
+                  </Text>
                 </View>
               </View>
             </Pressable>
