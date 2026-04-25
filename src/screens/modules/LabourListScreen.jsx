@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   FlatList,
   Image,
@@ -22,6 +22,9 @@ import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 import { getLabours } from "../../api/labourApi";
 import { addLabour } from "../../api/labourApi";
+import { deleteLabour, updateLabour } from "../../api/labourApi";
+import { markAttendance, getTodayAttendance } from "../../api/attendanceApi";
+import { Alert } from "react-native";
 
 export function LabourListScreen({ route, navigation }) {
   const { projectId, vendorId: filterVendorId, date: routeDate } = route.params || {};
@@ -41,7 +44,56 @@ export function LabourListScreen({ route, navigation }) {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [labours, setLabours] = useState([]);
 const [loading, setLoading] = useState(false);
+const [editId, setEditId] = useState(null);
+const [attendanceMap, setAttendanceMap] = useState({});
+useEffect(() => {
+  fetchLabours();
+  fetchAttendance();
+}, []);
 
+const fetchLabours = async () => {
+  try {
+    setLoading(true);
+
+    const res = await getLabours();
+    const data = res?.data?.data || [];
+
+    const formatted = data.map((item) => ({
+      id: item.id,
+      name: item.full_name,
+      age: item.age,
+      gender: item.gender,
+      phone: item.phone,
+      vendorId: item.vendor_id,
+      photoUri: item.profile_pic,
+    }));
+
+    setLabours(formatted);
+
+  } catch (err) {
+    console.log("Labour fetch error:", err.response?.data || err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// ✅ OUTSIDE (correct)
+const fetchAttendance = async () => {
+  try {
+    const res = await getTodayAttendance();
+    const data = res?.data?.data || [];
+
+    const map = {};
+    data.forEach((item) => {
+      map[item.labour_id] = item.is_present == 1;
+    });
+
+    setAttendanceMap(map);
+
+  } catch (err) {
+    console.log("Attendance fetch error:", err.response?.data || err.message);
+  }
+};
   const filtered = useMemo(() => {
   if (!search.trim()) {
     return labours.filter(
@@ -68,7 +120,7 @@ const [loading, setLoading] = useState(false);
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return;
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.7,
       allowsEditing: true,
       aspect: [1, 1],
@@ -84,7 +136,7 @@ const [loading, setLoading] = useState(false);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images, // ✅ updated
+      mediaTypes: ['images'], // ✅ updated
       quality: 0.7,
       allowsEditing: true,
       aspect: [1, 1],
@@ -93,87 +145,159 @@ const [loading, setLoading] = useState(false);
       setPhotoUri(result.assets[0].uri);
     }
   };
+  const handleEdit = (item) => {
+  setEditId(item.id);
+
+  setName(item.name || '');
+  setAge(String(item.age || ''));
+  setPhone(item.phone || '');
+  setGender(item.gender || 'male');
+  setVendorId(Number(item.vendorId) || null);
+  setPhotoUri(item.photoUri || null);
+
+  setShowAddModal(true);
+};
+const handleDelete = (id) => {
+  Alert.alert(
+    "Delete Labour",
+    "Are you sure you want to delete?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteLabour(id);
+            fetchLabours();
+          } catch (err) {
+            console.log("Delete error:", err.response?.data);
+          }
+        },
+      },
+    ]
+  );
+};
 
   const resetModal = () => {
-    setName(''); setAge(''); setPhone('');
-    setGender('male'); setVendorId(null); setPhotoUri(null);
-    setShowAddModal(false);
-  };
+  setEditId(null);   // 🔥 IMPORTANT FIX
+  setName('');
+  setAge('');
+  setPhone('');
+  setGender('male');
+  setVendorId(null);
+  setPhotoUri(null);
+  setShowAddModal(false);
+};
 
   const renderItem = ({ item, index }) => {
-    const isPresent = attendanceFor?.(projectId, selectedDate, item.id) ?? false;
+    const isPresent = attendanceMap[item.id] || false;
+
+
 
     return (
-      <View style={[styles.row, index % 2 === 0 && styles.rowEven]}>
-        {/* SL */}
-        <View style={[styles.cell, styles.colSl]}>
-          <Text style={styles.cellText}>{index + 1}</Text>
-        </View>
+  <View style={[styles.row, index % 2 === 0 && styles.rowEven]}>
+    
+    {/* SL */}
+    <View style={[styles.cell, styles.colSl]}>
+      <Text style={styles.cellText}>{index + 1}</Text>
+    </View>
 
-        {/* Photo */}
-        <View style={[styles.cell, styles.colPhoto]}>
-          {item.photoUri ? (
-            <Image source={{ uri: item.photoUri }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <MaterialCommunityIcons name="account" size={18} color="#90a4c0" />
-            </View>
+    {/* Photo */}
+    <View style={[styles.cell, styles.colPhoto]}>
+      {item.photoUri ? (
+        <Image source={{ uri: item.photoUri }} style={styles.avatar} />
+      ) : (
+        <View style={styles.avatarPlaceholder}>
+          <MaterialCommunityIcons name="account" size={18} color="#90a4c0" />
+        </View>
+      )}
+    </View>
+
+    {/* Name */}
+    <View style={[styles.cell, styles.colName]}>
+      <Text style={styles.name}>{item.name || '—'}</Text>
+      <Text style={styles.phone}>{item.phone || ''}</Text>
+      <Text style={styles.wage}>₹ {item.dailyWage || '0'}</Text>
+    </View>
+
+    {/* Vendor */}
+    <View style={[styles.cell, styles.colVendor]}>
+      <Text style={styles.cellText}>
+        {vendors.find((v) => Number(v.id) === Number(item.vendorId))?.name}
+      </Text>
+    </View>
+
+    {/* Gender */}
+    <View style={[styles.cell, styles.colGender]}>
+      <View style={[
+        styles.genderBadge,
+        item.gender === 'female' ? styles.genderF : styles.genderM
+      ]}>
+        <Text style={styles.genderText}>
+          {item.gender?.[0]?.toUpperCase() ?? '—'}
+        </Text>
+      </View>
+    </View>
+
+    {/* Age */}
+    <View style={[styles.cell, styles.colAge]}>
+      <Text style={styles.cellText}>{item.age || '—'}</Text>
+    </View>
+
+    {/* Attendance */}
+    <View style={[styles.cell, styles.colAttend]}>
+      <Pressable
+        onPress={async () => {
+  try {
+    const newStatus = !attendanceMap[item.id];
+
+    await markAttendance({
+      labour_ids: [item.id],   // ✅ fixed
+      date: selectedDate,
+      is_present: newStatus ? 1 : 0,
+    });
+
+    setAttendanceMap((prev) => ({
+      ...prev,
+      [item.id]: newStatus,
+    }));
+
+  } catch (err) {
+    console.log("Attendance error:", err.response?.data || err.message);
+  }
+}}
+      >
+        <View style={[styles.checkbox, isPresent && styles.checkboxActive]}>
+          {isPresent && (
+            <MaterialCommunityIcons name="check" size={13} color="#fff" />
           )}
         </View>
+      </Pressable>
+    </View>
 
-       {/* Name + phone + wages */}
-<View style={[styles.cell, styles.colName]}>
-  <Text style={styles.name} numberOfLines={1}>
-    {item.name || '—'}
-  </Text>
+    {/* 🔥 ACTIONS (FIXED POSITION) */}
+    <View style={[styles.cell, styles.colAction]}>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        
+        <Pressable onPress={() => handleEdit(item)}>
+          <MaterialCommunityIcons name="pencil" size={16} color="#2563eb" />
+        </Pressable>
 
-  <Text style={styles.phone}>
-    {item.phone || ''}
-  </Text>
+        <Pressable onPress={() => handleDelete(item.id)}>
+          <MaterialCommunityIcons name="delete" size={16} color="#ef4444" />
+        </Pressable>
 
-  <Text style={styles.wage}>
-    ₹ {item.dailyWage || '0'}
-  </Text>
-</View>
-
-        {/* Vendor */}
-        <View style={[styles.cell, styles.colVendor]}>
-          <Text style={styles.cellText} numberOfLines={2}>
-            {vendors.find((v) => v.id === item.vendorId)?.name || '—'}
-          </Text>
-        </View>
-
-        {/* Gender */}
-        <View style={[styles.cell, styles.colGender]}>
-          <View style={[styles.genderBadge, item.gender === 'female' ? styles.genderF : styles.genderM]}>
-            <Text style={styles.genderText}>{item.gender?.[0]?.toUpperCase() ?? '—'}</Text>
-          </View>
-        </View>
-
-        {/* Age */}
-        <View style={[styles.cell, styles.colAge]}>
-          <Text style={styles.cellText}>{item.age || '—'}</Text>
-        </View>
-
-        {/* Attendance */}
-        <View style={[styles.cell, styles.colAttend]}>
-          <Pressable
-            onPress={() => toggleAttendance?.(projectId, selectedDate, item.id)}
-            hitSlop={10}
-          >
-            <View style={[styles.checkbox, isPresent && styles.checkboxActive]}>
-              {isPresent && (
-                <MaterialCommunityIcons name="check" size={13} color="#fff" />
-              )}
-            </View>
-          </Pressable>
-        </View>
       </View>
-    );
+    </View>
+
+  </View>
+);
   };
-  const presentCount = labours.filter(
-  (p) => attendanceFor?.(projectId, selectedDate, p.id)
+ const presentCount = labours.filter(
+  (p) => attendanceMap[p.id]
 ).length;
+
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -257,7 +381,8 @@ const [loading, setLoading] = useState(false);
                 <Text style={[styles.th, styles.colVendor]}>Vendor</Text>
                 <Text style={[styles.th, styles.colGender]}>G</Text>
                 <Text style={[styles.th, styles.colAge]}>Age</Text>
-                <Text style={[styles.th, styles.colAttend, { borderRightWidth: 0 }]}>✓</Text>
+                <Text style={[styles.th, styles.colAttend]}>✓</Text>
+<Text style={[styles.th, styles.colAction, { borderRightWidth: 0 }]}>⋯</Text>
               </View>
             </>
           )}
@@ -371,19 +496,32 @@ const [loading, setLoading] = useState(false);
   if (!name.trim() || !phone.trim()) return;
 
   try {
-    await addLabour({
-      full_name: name,
-      age: Number(age),
-      gender: gender,
-      phone: phone,
-      vendor_id: vendorId,
-    });
+    if (editId) {
+      await updateLabour(editId, {
+        full_name: name,
+        age: Number(age),
+        gender,
+        phone,
+        vendor_id: vendorId,
+        profile_pic: photoUri,
+      });
+    } else {
+      await addLabour({
+  full_name: name,
+  age: Number(age),
+  gender,
+  phone,
+  vendor_id: vendorId,
+  project_id: projectId,   // 🔥 MUST ADD
+});
+    }
 
-    fetchLabours();   // 🔥 refresh list
+    setEditId(null);
+    await fetchLabours();   // 🔥 important
     resetModal();
 
   } catch (err) {
-    console.log("Add labour error:", err.response?.data || err.message);
+    console.log("Save error:", err.response?.data || err.message);
   }
 }}
             >
@@ -587,13 +725,14 @@ const styles = StyleSheet.create({
     borderRightColor: '#e2eaf4',
   },
   cellText: { fontSize: 12, color: '#374151', textAlign: 'center', fontWeight: '500' },
-  colSl:     { width: 30 },
-  colPhoto:  { width: 44 },
-  colName:   { flex: 1, alignItems: 'flex-start', paddingLeft: 8 },
-  colVendor: { width: 76 },
-  colGender: { width: 34 },
-  colAge:    { width: 36 },
-  colAttend: { width: 46, borderRightWidth: 0 },
+  colSl:     { width: 25 },
+  colPhoto:  { width: 40 },
+  colName:   { flex: 1, alignItems: 'flex-start', paddingLeft: 10 },
+  colVendor: { width: 50 },
+  colGender: { width: 30 },
+  colAge:    { width: 30 },
+  colAttend: { width: 40 },
+  colAction: { width: 40 },
   avatar: { width: 32, height: 32, borderRadius: 8 },
   avatarPlaceholder: {
     width: 32, height: 32, borderRadius: 8,

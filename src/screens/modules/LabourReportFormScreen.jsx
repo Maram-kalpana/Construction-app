@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TextInput, View, TouchableOpacity
@@ -10,36 +10,101 @@ import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import { getLabours } from "../../api/labourApi";
+import { getTodayAttendance } from "../../api/attendanceApi";
+import { createReport } from "../../api/reportApi";
 
 export function LabourReportFormScreen({ route, navigation }) {
   const { projectId } = route.params || {};
-  const {
-    getDailyBundle, labourPersonById, vendors, dateKey, attendanceLabourIds
-  } = useApp();
+ const { vendors, dateKey } = useApp();
   const today = dateKey();
   const [selectedDate, setSelectedDate] = useState(today);
   const [search, setSearch] = useState('');
+  const [labours, setLabours] = useState([]);
+const [attendance, setAttendance] = useState([]);
+useEffect(() => {
+  fetchData();
+}, [selectedDate]);
 
-  const bundle = getDailyBundle(projectId, selectedDate);
-  const attendedIds = attendanceLabourIds(projectId, selectedDate);
+const fetchData = async () => {
+  try {
+    const labourRes = await getLabours();
+    const attendanceRes = await getTodayAttendance();
 
+    const laboursData = labourRes?.data?.data || [];
+    const attendanceData = attendanceRes?.data?.data || [];
+
+    setLabours(laboursData);
+    setAttendance(attendanceData);
+
+  } catch (err) {
+    console.log("Report fetch error:", err.response?.data || err.message);
+  }
+};
+
+  
   const vendorsWithRows = useMemo(() => {
-    const people = attendedIds.map((id) => labourPersonById(id)).filter(Boolean);
-    const map = {};
-    people.forEach((p) => {
-      const key = p.vendorId || 'no_vendor';
-      if (!map[key]) map[key] = [];
-      map[key].push(p);
-    });
-    return Object.entries(map).map(([vendorId, persons], idx) => ({
-      id: vendorId,
-      slNo: idx + 1,
-      vendorName: vendorId === 'no_vendor' ? 'No Vendor' : (vendors.find((v) => v.id === vendorId)?.name || 'Vendor'),
-      persons,
-    })).filter((v) => !search.trim() || v.vendorName.toLowerCase().includes(search.toLowerCase()));
-  }, [attendedIds, labourPersonById, search, vendors]);
+
+  const presentLabourIds = (attendance || [])
+    .filter((a) => a?.is_present == 1)
+    .map((a) => Number(a?.labour_id));
+
+  const presentLabours = (labours || []).filter((l) =>
+    presentLabourIds.includes(Number(l.id))
+  );
+
+  const map = {};
+
+  presentLabours.forEach((p) => {
+    const key = p.vendor_id || 'no_vendor';
+    if (!map[key]) map[key] = [];
+    map[key].push(p);
+  });
+
+  return Object.entries(map).map(([vendorId, persons], idx) => ({
+    id: vendorId,
+    slNo: idx + 1,
+    vendorName:
+      vendorId === 'no_vendor'
+        ? 'No Vendor'
+        : vendors.find((v) => v.id == vendorId)?.name || 'Vendor',
+    persons,
+  }));
+
+}, [labours, attendance, vendors]);
 
   const totalPresent = vendorsWithRows.reduce((sum, v) => sum + v.persons.length, 0);
+
+  const handleSaveReport = async () => {
+  try {
+    for (const v of vendorsWithRows) {
+
+      const mason = v.persons.filter((p) => p.gender === 'male').length;
+
+      const female_unskilled = v.persons.filter(
+        (p) => p.gender !== 'male'
+      ).length;
+
+      const payload = {
+        vendor_id: Number(v.id),
+        mason,
+        male_skilled: 0,
+        female_unskilled,
+        others: 0,
+        work_done: "Work done",
+        date: selectedDate,
+      };
+
+      await createReport(payload);
+    }
+
+    console.log("Report saved successfully");
+    navigation.goBack();
+
+  } catch (err) {
+    console.log("Report save error:", err.response?.data || err.message);
+  }
+};
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -143,7 +208,7 @@ export function LabourReportFormScreen({ route, navigation }) {
                   <View style={styles.namesRow}>
                     <MaterialCommunityIcons name="account-multiple-outline" size={13} color={colors.mutedText} />
                     <Text style={styles.namesText} numberOfLines={1}>
-                      {v.persons.map((p) => p.name).slice(0, 4).join(', ')}
+                      {v.persons.map((p) => p.full_name).slice(0, 4).join(', ')}
                       {v.persons.length > 4 ? ` +${v.persons.length - 4} more` : ''}
                     </Text>
                   </View>
@@ -153,8 +218,8 @@ export function LabourReportFormScreen({ route, navigation }) {
           })}
 
           <GradientButton
-            title="Save Report"
-            onPress={() => navigation.goBack()}
+  title="Save Report"
+  onPress={handleSaveReport}   // 
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
         </ScrollView>
