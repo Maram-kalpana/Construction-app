@@ -46,6 +46,14 @@ export function LabourListScreen({ route, navigation }) {
 const [loading, setLoading] = useState(false);
 const [editId, setEditId] = useState(null);
 const [attendanceMap, setAttendanceMap] = useState({});
+const [projectIdState, setProjectIdState] = useState(projectId || null);
+const [showReasonModal, setShowReasonModal] = useState(false);
+const [editReason, setEditReason] = useState('');
+
+const [showViewModal, setShowViewModal] = useState(false);
+const [selectedLabour, setSelectedLabour] = useState(null);
+const [actionType, setActionType] = useState(null);
+const [actionLabour, setActionLabour] = useState(null);
 useEffect(() => {
   fetchLabours();
   fetchAttendance();
@@ -59,14 +67,15 @@ const fetchLabours = async () => {
     const data = res?.data?.data || [];
 
     const formatted = data.map((item) => ({
-      id: item.id,
-      name: item.full_name,
-      age: item.age,
-      gender: item.gender,
-      phone: item.phone,
-      vendorId: item.vendor_id,
-      photoUri: item.profile_pic,
-    }));
+  id: item.id,
+  name: item.full_name,
+  age: item.age,
+  gender: item.gender,
+  phone: item.phone,
+  vendorId: item.vendor_id,
+  photoUri: item.profile_pic,
+  dailyWage: item.daily_wage || 0,   // ✅ ADD THIS
+}));
 
     setLabours(formatted);
 
@@ -198,27 +207,13 @@ const handleDelete = (id) => {
     return (
   <View style={[styles.row, index % 2 === 0 && styles.rowEven]}>
     
-    {/* SL */}
-    <View style={[styles.cell, styles.colSl]}>
-      <Text style={styles.cellText}>{index + 1}</Text>
-    </View>
-
-    {/* Photo */}
-    <View style={[styles.cell, styles.colPhoto]}>
-      {item.photoUri ? (
-        <Image source={{ uri: item.photoUri }} style={styles.avatar} />
-      ) : (
-        <View style={styles.avatarPlaceholder}>
-          <MaterialCommunityIcons name="account" size={18} color="#90a4c0" />
-        </View>
-      )}
-    </View>
+    
 
     {/* Name */}
     <View style={[styles.cell, styles.colName]}>
       <Text style={styles.name}>{item.name || '—'}</Text>
-      <Text style={styles.phone}>{item.phone || ''}</Text>
-      <Text style={styles.wage}>₹ {item.dailyWage || '0'}</Text>
+      
+      
     </View>
 
     {/* Vendor */}
@@ -240,10 +235,7 @@ const handleDelete = (id) => {
       </View>
     </View>
 
-    {/* Age */}
-    <View style={[styles.cell, styles.colAge]}>
-      <Text style={styles.cellText}>{item.age || '—'}</Text>
-    </View>
+   
 
     {/* Attendance */}
     <View style={[styles.cell, styles.colAttend]}>
@@ -280,15 +272,14 @@ const handleDelete = (id) => {
     <View style={[styles.cell, styles.colAction]}>
       <View style={{ flexDirection: 'row', gap: 6 }}>
         
-        <Pressable onPress={() => handleEdit(item)}>
-          <MaterialCommunityIcons name="pencil" size={16} color="#2563eb" />
-        </Pressable>
-
-        <Pressable onPress={() => handleDelete(item.id)}>
-          <MaterialCommunityIcons name="delete" size={16} color="#ef4444" />
-        </Pressable>
-
-      </View>
+<Pressable
+  onPress={() => {
+    setSelectedLabour(item);
+    setShowViewModal(true);
+  }}
+>
+  <MaterialCommunityIcons name="eye" size={18} color="#2563eb" />
+</Pressable>      </View>
     </View>
 
   </View>
@@ -304,7 +295,7 @@ const handleDelete = (id) => {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
@@ -375,14 +366,13 @@ const handleDelete = (id) => {
 
               {/* ── TABLE HEADER ── */}
               <View style={styles.tableHeader}>
-                <Text style={[styles.th, styles.colSl]}>#</Text>
-                <Text style={[styles.th, styles.colPhoto]}>Pic</Text>
-                <Text style={[styles.th, styles.colName]}>Name / Phone</Text>
+                
+                <Text style={[styles.th, styles.colName]}>Name </Text>
                 <Text style={[styles.th, styles.colVendor]}>Vendor</Text>
                 <Text style={[styles.th, styles.colGender]}>G</Text>
-                <Text style={[styles.th, styles.colAge]}>Age</Text>
+                
                 <Text style={[styles.th, styles.colAttend]}>✓</Text>
-<Text style={[styles.th, styles.colAction, { borderRightWidth: 0 }]}>⋯</Text>
+<Text style={[styles.th, styles.colAction, { borderRightWidth: 0 }]}> Action </Text>
               </View>
             </>
           )}
@@ -430,6 +420,7 @@ const handleDelete = (id) => {
   </View>
 </View>
 
+
 {/* ── Phone + Daily Wages ── */}
 <View style={styles.grid2}>
   <AppTextField
@@ -450,44 +441,63 @@ const handleDelete = (id) => {
     placeholder="₹ Amount"
   />
 </View>
-            {/* ── Age + Gender ── */}
-            <View style={styles.grid2}>
-              <AppTextField
-                style={styles.half}
-                label="Age"
-                value={age}
-                onChangeText={setAge}
-                keyboardType="numeric"
-                placeholder="Age"
-              />
-              <SelectField
-                style={styles.half}
-                label="Gender"
-                value={gender}
-                onChange={setGender}
-                options={[
-                  { label: 'Male', value: 'male' },
-                  { label: 'Female', value: 'female' },
-                  { label: 'Other', value: 'other' },
-                ]}
-              />
-            </View>
+           {/* ── Row 1: Age + Gender + Date ── */}
+<View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
 
-            {/* ── Date + Vendor ── */}
-            <View style={styles.grid2}>
-              <DatePickerField style={styles.half} label="Effective Date" value={selectedDate} onChange={setSelectedDate} />
-              <SelectField
-                style={styles.half}
-                label="Vendor"
-                value={vendorId}
-                onChange={setVendorId}
-                placeholder="Select vendor"
-                options={[
-                  { label: 'Select vendor', value: null },
-                  ...vendors.map((v) => ({ label: v.name, value: v.id })),
-                ]}
-              />
-            </View>
+  <AppTextField
+    style={{ flex: 1 }}
+    label="Age"
+    value={age}
+    onChangeText={setAge}
+    keyboardType="numeric"
+    placeholder="Age"
+  />
+
+  <SelectField
+    style={{ flex: 1 }}
+    label="Gender"
+    value={gender}
+    onChange={setGender}
+    options={[
+      { label: 'Male', value: 'male' },
+      { label: 'Female', value: 'female' },
+      { label: 'Other', value: 'other' },
+    ]}
+  />
+
+  <DatePickerField
+    style={{ flex: 1 }}
+    label="Date"
+    value={selectedDate}
+    onChange={setSelectedDate}
+  />
+
+</View>
+
+            {/* ── Row 2: Vendor + Project ── */}
+<View style={styles.grid2}>
+  <SelectField
+    style={styles.half}
+    label="Vendor"
+    value={vendorId}
+    onChange={setVendorId}
+    placeholder="Select vendor"
+    options={[
+      { label: 'Select vendor', value: null },
+      ...vendors.map((v) => ({ label: v.name, value: v.id })),
+    ]}
+  />
+
+  <SelectField
+    style={styles.half}
+    label="Project"
+    value={projectIdState}
+    onChange={setProjectIdState}
+    options={[
+      { label: 'Current Project', value: projectId },
+    ]}
+  />
+</View>
 
             {/* ── Save ── */}
             <Pressable
@@ -504,6 +514,7 @@ const handleDelete = (id) => {
         phone,
         vendor_id: vendorId,
         profile_pic: photoUri,
+        edit_reason: editReason
       });
     } else {
       await addLabour({
@@ -512,7 +523,7 @@ const handleDelete = (id) => {
   gender,
   phone,
   vendor_id: vendorId,
-  project_id: projectId,   // 🔥 MUST ADD
+  project_id: projectIdState, // ✅ FIXED
 });
     }
 
@@ -534,7 +545,115 @@ const handleDelete = (id) => {
           </View>
         </View>
       </Modal>
+      <Modal visible={showViewModal} transparent animationType="slide">
+  <View style={styles.modalBackdrop}>
+    <View style={styles.modalCard}>
 
+      <Text style={styles.modalTitle}>Labour Details</Text>
+
+      {/* PHOTO */}
+      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        {!!selectedLabour?.photoUri ? (
+          <Image
+            source={{ uri: selectedLabour.photoUri }}
+            style={{ width: 100, height: 100, borderRadius: 16 }}
+          />
+        ) : (
+          <View style={{
+            width: 100,
+            height: 100,
+            borderRadius: 16,
+            backgroundColor: '#eaf3ff',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MaterialCommunityIcons name="account" size={40} color="#4A90E2" />
+          </View>
+        )}
+      </View>
+
+     {selectedLabour && (
+  <View style={{ gap: 10 }}>
+
+    <View style={styles.viewField}>
+      <Text style={styles.viewLabel}>Name</Text>
+      <Text style={styles.viewValue}>{selectedLabour.name}</Text>
+    </View>
+
+    <View style={styles.viewField}>
+      <Text style={styles.viewLabel}>Phone</Text>
+      <Text style={styles.viewValue}>{selectedLabour.phone}</Text>
+    </View>
+
+    <View style={styles.viewField}>
+      <Text style={styles.viewLabel}>Age</Text>
+      <Text style={styles.viewValue}>{selectedLabour.age}</Text>
+    </View>
+
+    <View style={styles.viewField}>
+      <Text style={styles.viewLabel}>Gender</Text>
+      <Text style={styles.viewValue}>{selectedLabour.gender}</Text>
+    </View>
+
+    <View style={styles.viewField}>
+      <Text style={styles.viewLabel}>Vendor</Text>
+      <Text style={styles.viewValue}>
+        {vendors.find(v => Number(v.id) === Number(selectedLabour.vendorId))?.name || '-'}
+      </Text>
+    </View>
+
+    <View style={styles.viewField}>
+      <Text style={styles.viewLabel}>Daily Wages</Text>
+      <Text style={styles.viewValue}>
+        {'₹ ' + (selectedLabour.dailyWage ?? 0)}
+      </Text>
+    </View>
+
+  </View>
+)}
+      
+
+      
+      {/* ACTION BUTTONS */}
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+
+        {/* EDIT BUTTON */}
+        <Pressable
+          style={[styles.actionBtn, { backgroundColor: '#2563eb' }]}
+          onPress={() => {
+  setActionLabour(selectedLabour);   // ✅ IMPORTANT
+  setActionType('edit');
+  setShowViewModal(false);
+  setShowReasonModal(true);
+}}
+        >
+          <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
+          <Text style={styles.actionText}>Edit</Text>
+        </Pressable>
+
+        {/* DELETE BUTTON */}
+        <Pressable
+          style={[styles.actionBtn, { backgroundColor: '#ef4444' }]}
+          onPress={() => {
+  setActionLabour(selectedLabour);   // ✅ IMPORTANT
+  setActionType('delete');
+  setShowViewModal(false);
+  setShowReasonModal(true);
+}}
+        >
+          <MaterialCommunityIcons name="delete" size={16} color="#fff" />
+          <Text style={styles.actionText}>Delete</Text>
+        </Pressable>
+
+      </View>
+
+      <Pressable onPress={() => setShowViewModal(false)} style={styles.cancelBtn}>
+        <Text style={styles.cancelText}>Close</Text>
+      </Pressable>
+
+    </View>
+  </View>
+</Modal>
       {/* ══════════ PHOTO SOURCE MODAL ══════════ */}
       <Modal
         visible={showPhotoModal}
@@ -573,7 +692,7 @@ const handleDelete = (id) => {
             </Pressable>
 
             {/* Remove option — only if photo already selected */}
-            {photoUri && (
+            {!!photoUri  && (
               <>
                 <View style={styles.photoDivider} />
                 <Pressable
@@ -597,6 +716,58 @@ const handleDelete = (id) => {
           </View>
         </Pressable>
       </Modal>
+      <Modal visible={showReasonModal} transparent animationType="slide">
+  <View style={styles.modalBackdrop}>
+    <View style={styles.modalCard}>
+
+      <Text style={styles.modalTitle}>Enter Reason</Text>
+
+      <AppTextField
+        label="Reason"
+        value={editReason}
+        onChangeText={setEditReason}
+        placeholder="Enter reason..."
+        multiline
+      />
+
+      <Pressable
+        style={styles.saveBtn}
+        onPress={async () => {
+          if (!editReason.trim()) {
+            Alert.alert("Required", "Please enter reason");
+            return;
+          }
+
+          if (!actionLabour) return;
+
+          setShowReasonModal(false);
+
+          if (actionType === 'edit') {
+            setTimeout(() => {
+              handleEdit(actionLabour); // ✅ EDIT WORKS
+            }, 200);
+          }
+
+          if (actionType === 'delete') {
+            try {
+              await deleteLabour(actionLabour.id); // ✅ DELETE WORKS
+              fetchLabours();
+            } catch (err) {
+              console.log("Delete error:", err.response?.data);
+            }
+          }
+        }}
+      >
+        <Text style={styles.saveText}>Continue</Text>
+      </Pressable>
+
+      <Pressable onPress={() => setShowReasonModal(false)} style={styles.cancelBtn}>
+        <Text style={styles.cancelText}>Cancel</Text>
+      </Pressable>
+
+    </View>
+  </View>
+</Modal>
     </ScreenContainer>
   );
 }
@@ -725,14 +896,14 @@ const styles = StyleSheet.create({
     borderRightColor: '#e2eaf4',
   },
   cellText: { fontSize: 12, color: '#374151', textAlign: 'center', fontWeight: '500' },
-  colSl:     { width: 25 },
-  colPhoto:  { width: 40 },
-  colName:   { flex: 1, alignItems: 'flex-start', paddingLeft: 10 },
-  colVendor: { width: 50 },
-  colGender: { width: 30 },
-  colAge:    { width: 30 },
-  colAttend: { width: 40 },
-  colAction: { width: 40 },
+  
+
+  colName:   { flex: 2, alignItems: 'flex-start', paddingLeft: 10 },
+  colVendor: { width: 90 },
+  colGender: { width: 40 },
+
+  colAttend: { width: 50 },
+  colAction: { width: 55 },
   avatar: { width: 32, height: 32, borderRadius: 8 },
   avatarPlaceholder: {
     width: 32, height: 32, borderRadius: 8,
@@ -836,4 +1007,39 @@ const styles = StyleSheet.create({
     color: colors.mutedText,
     marginBottom: 6,
   },
+  viewField: {
+  backgroundColor: '#f8fafc',
+  borderRadius: 12,
+  padding: 10,
+  margin:6,
+  borderWidth: 1,
+  borderColor: '#e2e8f0'
+},
+
+viewLabel: {
+  fontSize: 11,
+  color: '#64748b',
+  marginBottom: 2
+},
+
+viewValue: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: '#1e293b'
+},
+
+actionBtn: {
+  flex: 1,
+  height: 44,
+  borderRadius: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexDirection: 'row',
+  gap: 6
+},
+
+actionText: {
+  color: '#fff',
+  fontWeight: '800'
+},
 });

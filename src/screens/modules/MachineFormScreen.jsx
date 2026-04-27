@@ -17,6 +17,8 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import { getMachineById, addMachine, updateMachine, deleteMachine } from "../../api/machineApi";
+
 
 function parseTimeToMinutes(t) {
   const s = String(t || '').trim();
@@ -41,27 +43,38 @@ function diffHours(start, end) {
 
 export function MachineFormScreen({ route, navigation }) {
   const { projectId, entryId } = route.params;
-  const { getDailyBundle, addMachineEntry, deleteMachineEntry, machineNameOptions, vendors, dateKey } = useApp();
+  const { vendors, dateKey } = useApp();
   const today = dateKey();
-  const bundle = getDailyBundle(projectId, today);
-  const editing = useMemo(() => bundle.machines.find((e) => e.id === entryId) ?? null, [bundle.machines, entryId]);
-
+  
   const [partyName, setPartyName] = useState('');
   const [vendorId, setVendorId] = useState(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [totalHrs, setTotalHrs] = useState('');
   const [workDone, setWorkDone] = useState('');
+  const [selectedMachineId, setSelectedMachineId] = useState(null);
+  const [projectIdState, setProjectIdState] = useState(projectId || null);
 
   useEffect(() => {
-    if (!editing) return;
-    setPartyName(editing.partyName ?? '');
-    setVendorId(editing.vendorId ?? null);
-    setStartTime(editing.startTime ?? '');
-    setEndTime(editing.endTime ?? '');
-    setTotalHrs(String(editing.totalHrs ?? ''));
-    setWorkDone(editing.workDone ?? '');
-  }, [editing]);
+  if (!entryId) return;
+
+  fetchMachine();
+}, [entryId]);
+
+const fetchMachine = async () => {
+  try {
+    const res = await getMachineById(entryId);
+const data = res?.data?.data || {};
+    setPartyName(data.name || '');
+    setVendorId(data.vendor_id || null);
+    setStartTime(data.start_time || '');
+    setEndTime(data.end_time || '');
+    setTotalHrs(String(data.total_hours || ''));
+    setWorkDone(data.work_done || '');
+  } catch (err) {
+    console.log("Fetch machine error", err);
+  }
+};
 
   // Auto-calculate whenever start or end changes
   useEffect(() => {
@@ -69,39 +82,59 @@ export function MachineFormScreen({ route, navigation }) {
     if (auto) setTotalHrs(auto);
   }, [startTime, endTime]);
 
-  const machineOptions = useMemo(
-    () => machineNameOptions(projectId)
-      .filter((name) => name.toLowerCase().includes(partyName.toLowerCase()))
-      .slice(0, 6),
-    [machineNameOptions, partyName, projectId],
-  );
+  
 
   const onSave = async () => {
-    if (partyName.trim().length < 2) {
-      Alert.alert('Missing', 'Enter party / machine name.');
-      return;
-    }
-    await addMachineEntry(
-      projectId,
-      { id: editing?.id, partyName, vendorId, startTime, endTime, totalHrs, workDone },
-      today,
-    );
-    navigation.goBack();
-  };
+  if (!selectedMachineId) {
+  Alert.alert("Missing", "Please select equipment");
+  return;
+}
 
+  const payload = {
+  project_id: projectIdState,
+  equipment_id: selectedMachineId, // ✅ now exists
+  vendor_id: vendorId,
+  start_time: startTime,
+  end_time: endTime,
+  total_hours: totalHrs,
+  work_done: workDone,
+  date: today, // ⚠️ don’t forget this
+};
+  console.log("PAYLOAD:", payload); // 👈 DEBUG
+
+  try {
+    if (entryId) {
+      await updateMachine(entryId, payload);
+      Alert.alert("Success", "Updated successfully");
+    } else {
+      await addMachine(payload);
+      Alert.alert("Success", "Added successfully");
+    }
+
+    navigation.goBack();
+  } catch (err) {
+    console.log("Save error", err?.response?.data || err.message);
+    Alert.alert("Error", "Failed to save");
+  }
+};
   const onDelete = () => {
-    if (!editing) return;
-    Alert.alert('Delete', 'Remove this machinery row?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          await deleteMachineEntry(projectId, editing.id, today);
-          navigation.goBack();
-        },
+  Alert.alert('Delete', 'Remove this machinery row?', [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Delete',
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          await deleteMachine(entryId);
+          Alert.alert("Success", entryId ? "Updated successfully" : "Added successfully");
+navigation.goBack();
+        } catch (err) {
+          console.log("Delete error", err);
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
 
   const hoursValid = !!diffHours(startTime, endTime);
 
@@ -114,27 +147,16 @@ export function MachineFormScreen({ route, navigation }) {
           <Text style={styles.sectionLabel}>Equipment</Text>
           <SelectField
             label="Equipment"
-            value={partyName || null}
-            onChange={(v) => setPartyName(v || '')}
+            value={selectedMachineId}
+onChange={setSelectedMachineId}
             placeholder="Select equipment"
             options={[
-              { label: 'Select equipment', value: null },
-              { label: 'JCB Excavator', value: 'JCB Excavator' },
-              { label: 'Concrete Mixer', value: 'Concrete Mixer' },
-              { label: 'Vibrator', value: 'Vibrator' },
-              ...machineNameOptions(projectId).map((n) => ({ label: n, value: n })),
-            ]}
+  { label: 'JCB Excavator', value: 1 },
+  { label: 'Concrete Mixer', value: 2 },
+  { label: 'Vibrator', value: 3 },
+]}
           />
 
-          {machineOptions.length > 0 && (
-            <View style={styles.optionsRow}>
-              {machineOptions.map((n) => (
-                <Pressable key={n} onPress={() => setPartyName(n)} style={styles.optionChip}>
-                  <Text style={styles.optionText}>{n}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
 
           {/* ── Vendor ── */}
           <Text style={styles.sectionLabel}>Vendor</Text>
@@ -144,13 +166,25 @@ export function MachineFormScreen({ route, navigation }) {
             onChange={setVendorId}
             placeholder="Select vendor"
             options={[
-              { label: 'Select vendor', value: null },
-              { label: 'Ravi Hire', value: 'ven_demo_1' },
-              { label: 'ACC Dealer', value: 'ven_demo_2' },
-              { label: 'Sri Ganesh', value: 'ven_demo_3' },
-              ...vendors.map((v) => ({ label: v.name, value: v.id })),
-            ]}
+  { label: 'Select vendor', value: null },
+  ...vendors.map((v) => ({
+    label: v.name,
+    value: v.id,
+  })),
+]}
           />
+
+          {/* ── Project ── */}
+<Text style={styles.sectionLabel}>Project</Text>
+<SelectField
+  label="Project"
+  value={projectIdState}
+  onChange={setProjectIdState}
+  placeholder="Select project"
+  options={[
+    { label: 'Current Project', value: projectId },
+  ]}
+/>
 
           {/* ── Time ── */}
           <Text style={styles.sectionLabel}>Working Hours</Text>
@@ -215,13 +249,13 @@ export function MachineFormScreen({ route, navigation }) {
 
           {/* ── Save ── */}
           <GradientButton
-            title={editing ? 'Update Row' : 'Save Row'}
+            title={entryId ? 'Update Row' : 'Save Row'}
             onPress={onSave}
             colors={['#2f86de', '#62b6ff']}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
 
-          {editing && (
+          {entryId && (
             <Pressable onPress={onDelete} style={styles.delBtn}>
               <MaterialCommunityIcons name="delete-outline" size={20} color="#ef4444" />
               <Text style={styles.delText}>Delete this entry</Text>

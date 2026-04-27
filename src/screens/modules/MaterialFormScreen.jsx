@@ -12,24 +12,51 @@ import { colors } from '../../theme/theme';
 export function MaterialFormScreen({ route, navigation }) {
   const { projectId, entryId, direction: dirParam } = route.params;
   const direction = dirParam === 'out' ? 'out' : 'in';
-  const { getDailyBundle, addMaterialEntry, deleteMaterialEntry, materialItemOptions, vendors, dateKey } = useApp();
-  const today = dateKey();
-  const bundle = getDailyBundle(projectId, today);
-  const list = direction === 'out' ? bundle.materialsOut : bundle.materialsIn;
-  const editing = useMemo(() => list.find((e) => e.id === entryId) ?? null, [list, entryId]);
 
+  // ✅ 1. get app FIRST
+  const app = useApp();
+
+  // ✅ 2. extract safely
+  const getDailyBundle = app?.getDailyBundle;
+  const addMaterialEntry = app?.addMaterialEntry;
+  const deleteMaterialEntry = app?.deleteMaterialEntry;
+  const materialItemOptions = app?.materialItemOptions || (() => []);
+  const vendors = app?.vendors || [];
+  const dateKey = app?.dateKey || (() => new Date().toISOString().slice(0, 10));
+
+  // ✅ 3. compute today
+  const today = dateKey();
+
+  // ✅ 4. now safe to use
+  const bundle = getDailyBundle
+    ? getDailyBundle(projectId, today)
+    : { materialsIn: [], materialsOut: [] };
+
+  const list =
+    direction === 'out'
+      ? bundle.materialsOut || []
+      : bundle.materialsIn || [];
+
+  const editing = useMemo(
+    () => list.find((e) => e.id === entryId) ?? null,
+    [list, entryId]
+  );
+
+  // ✅ 5. state AFTER everything
   const [itemName, setItemName] = useState('');
   const [qty, setQty] = useState('');
   const [supplier, setSupplier] = useState('');
   const [vendorId, setVendorId] = useState(null);
+  const [projectIdState, setProjectIdState] = useState(projectId || null);
 
   useEffect(() => {
-    if (!editing) return;
-    setItemName(editing.itemName ?? '');
-    setQty(String(editing.qty ?? ''));
-    setSupplier(editing.supplier ?? '');
-    setVendorId(editing.vendorId ?? null);
-  }, [editing]);
+  if (!editing) return;
+  setItemName(editing.itemName ?? '');
+  setQty(String(editing.qty ?? ''));
+  setSupplier(editing.supplier ?? '');
+  setVendorId(editing.vendorId ?? null);
+  setProjectIdState(editing.projectId ?? projectId); // ✅ ADD THIS
+}, [editing]);
 
   const itemOptions = useMemo(
     () => materialItemOptions(projectId).filter((name) => name.toLowerCase().includes(itemName.toLowerCase())).slice(0, 6),
@@ -42,7 +69,7 @@ export function MaterialFormScreen({ route, navigation }) {
       return;
     }
     await addMaterialEntry(
-      projectId,
+      projectIdState,
       {
         id: editing?.id,
         direction,
@@ -98,8 +125,29 @@ export function MaterialFormScreen({ route, navigation }) {
             onChangeText={setQty}
             placeholder="0"
           />
+
+          {/* ── Project ── */}
+<SelectField
+  label="Project"
+  value={projectIdState}
+  onChange={setProjectIdState}
+  placeholder="Select project"
+  options={[
+    { label: 'Current Project', value: projectId },
+  ]}
+/>
           <AppTextField label="Supplier (optional)" value={supplier} onChangeText={setSupplier} placeholder="Optional" />
-          <SelectField
+          {/* ── Project ── */}
+<SelectField
+  label="Project"
+  value={projectIdState}
+  onChange={setProjectIdState}
+  placeholder="Select project"
+  options={[
+    { label: 'Current Project', value: projectId },
+  ]}
+/>
+ <SelectField
             label="Vendor"
             value={vendorId}
             onChange={setVendorId}

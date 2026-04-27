@@ -12,17 +12,24 @@ import { colors } from '../../theme/theme';
 
 export function StockModuleScreen({ route }) {
   const { projectId } = route.params;
-  const {
-    getDailyBundle,
-    updateDailyPartial,
-    addCementConsumption,
-    deleteCementConsumption,
-    stockWorkOptions,
-    dateKey,
-  } = useApp();
+
+const app = useApp();
+
+const getDailyBundle = app?.getDailyBundle;
+const updateDailyPartial = app?.updateDailyPartial;
+const addCementConsumption = app?.addCementConsumption;
+const deleteCementConsumption = app?.deleteCementConsumption;
+const stockWorkOptions = app?.stockWorkOptions;
+const dateKey = app?.dateKey || (() => new Date().toISOString().slice(0, 10));
   const today = dateKey();
   const [selectedDate, setSelectedDate] = useState(today);
-  const bundle = getDailyBundle(projectId, selectedDate);
+ const bundle = getDailyBundle
+  ? getDailyBundle(projectId, selectedDate)
+  : {
+      cementStock: {},
+      cementConsumption: [],
+      remarks: '',
+    };
   const stock = bundle.cementStock || {};
   const lines = bundle.cementConsumption || [];
   const remarks = bundle.remarks ?? '';
@@ -36,6 +43,7 @@ export function StockModuleScreen({ route }) {
   const [work, setWork] = useState('');
   const [qty, setQty] = useState('');
   const [search, setSearch] = useState('');
+  const [projectIdState, setProjectIdState] = useState(projectId);
 
   useEffect(() => {
     setOpenBal(stock.openBal ?? '');
@@ -45,42 +53,83 @@ export function StockModuleScreen({ route }) {
     setRemarksLocal(bundle.remarks ?? '');
   }, [stock.openBal, stock.received, stock.cum, stock.bal, bundle.remarks]);
 
-  const workOptions = useMemo(
-    () => stockWorkOptions(projectId).filter((w) => w.toLowerCase().includes(work.toLowerCase())).slice(0, 6),
-    [projectId, stockWorkOptions, work],
-  );
+  const workOptions = useMemo(() => {
+  const list = stockWorkOptions ? stockWorkOptions(projectId) : [];
+
+  return list
+    .filter((w) =>
+      w.toLowerCase().includes(work.toLowerCase())
+    )
+    .slice(0, 6);
+}, [projectId, stockWorkOptions, work]);
   const visibleLines = useMemo(
     () => lines.filter((line) => !search.trim() || (line.work || '').toLowerCase().includes(search.toLowerCase())),
     [lines, search],
   );
 
   const persistStock = async (next) => {
-    const b = getDailyBundle(projectId, selectedDate);
-    await updateDailyPartial(projectId, { cementStock: { ...b.cementStock, ...next } }, selectedDate);
-  };
+  if (!updateDailyPartial) return;
+
+  const b = getDailyBundle
+    ? getDailyBundle(projectId, selectedDate)
+    : { cementStock: {} };
+
+  await updateDailyPartial(
+    projectId,
+    { cementStock: { ...b.cementStock, ...next } },
+    selectedDate
+  );
+};
 
   const persistRemarks = async (text) => {
-    setRemarksLocal(text);
-    await updateDailyPartial(projectId, { remarks: text }, selectedDate);
-  };
+  if (!updateDailyPartial) return;
+
+  setRemarksLocal(text);
+  await updateDailyPartial(projectId, { remarks: text }, selectedDate);
+};
 
   const onAddLine = async () => {
-    if (work.trim().length < 2) {
-      Alert.alert('Missing', 'Describe the work using cement.');
-      return;
-    }
-    await addCementConsumption(projectId, { work, qty }, selectedDate);
-    setWork('');
-    setQty('');
-  };
+  if (!addCementConsumption) return;
 
+  if (work.trim().length < 2) {
+    Alert.alert('Missing', 'Describe the work using cement.');
+    return;
+  }
+
+  await addCementConsumption(projectId, { work, qty }, selectedDate);
+  setWork('');
+  setQty('');
+};
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.h1}>Cement & stock</Text>
           <Text style={styles.sub}>Consumption by work, opening balance, receipts, and closing balance.</Text>
-          <DatePickerField label="Date" value={selectedDate} onChange={setSelectedDate} style={{ marginBottom: 10 }} />
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+
+  {/* DATE */}
+  <View style={{ flex: 1 }}>
+    <DatePickerField
+      label="Date"
+      value={selectedDate}
+      onChange={setSelectedDate}
+    />
+  </View>
+
+  {/* PROJECT */}
+  <View style={{ flex: 1 }}>
+    <SelectField
+      label="Project"
+      value={projectIdState}
+      onChange={setProjectIdState}
+      options={[
+        { label: 'Current Project', value: projectId },
+      ]}
+    />
+  </View>
+
+</View>
           <View style={styles.searchWrap}>
             <MaterialCommunityIcons name="magnify" size={20} color={colors.mutedText} />
             <TextInput
@@ -131,12 +180,12 @@ export function StockModuleScreen({ route }) {
               />
             </View>
             <GradientButton
-              title="Save stock figures"
-              onPress={() => persistStock({ openBal, received, cum, bal })}
-              colors={['#2f86de', '#62b6ff']}
-              style={styles.primaryBtn}
-              left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
-            />
+  title="Save stock figures"
+  onPress={() => persistStock({ openBal, received, cum, bal })}
+  colors={['#2f86de', '#62b6ff']}
+  style={styles.primaryBtn}
+  left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
+/>
           </View>
 
           <View style={styles.card}>

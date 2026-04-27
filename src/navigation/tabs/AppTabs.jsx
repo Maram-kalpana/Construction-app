@@ -24,14 +24,14 @@ export function AppTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(8,16,22,0.96)',
-          borderTopColor: 'rgba(255,255,255,0.1)',
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: '#7dd3fc',
-        tabBarInactiveTintColor: 'rgba(233,242,242,0.55)',
+  backgroundColor: '#fff',          // ✅ white bottom bar
+  borderTopColor: '#e5e7eb',        // light border
+  height: 62,
+  paddingBottom: 8,
+  paddingTop: 8,
+},
+        tabBarActiveTintColor: '#2563eb',   // blue active
+tabBarInactiveTintColor: '#9ca3af', // gray inactive
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
       }}
     >

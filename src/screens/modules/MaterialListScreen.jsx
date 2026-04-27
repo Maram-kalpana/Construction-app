@@ -34,7 +34,12 @@ export function MaterialListScreen({ route, navigation }) {
   const today = dateKey();
   const [selectedDate, setSelectedDate] = useState(today);
   const [search, setSearch] = useState('');
-  const { materialsIn, materialsOut } = useMemo(() => getDailyBundle(projectId, selectedDate), [getDailyBundle, projectId, selectedDate]);
+  const bundle = getDailyBundle
+  ? getDailyBundle(projectId, selectedDate)
+  : { materialsIn: [], materialsOut: [] };
+
+const materialsIn = bundle.materialsIn || [];
+const materialsOut = bundle.materialsOut || [];
   const combined = useMemo(
     () =>
       [...materialsIn.map((m) => ({ ...m, direction: 'in' })), ...materialsOut.map((m) => ({ ...m, direction: 'out' }))]
