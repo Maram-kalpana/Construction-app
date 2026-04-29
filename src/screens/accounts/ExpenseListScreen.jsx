@@ -18,7 +18,7 @@ export function ExpenseListScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { getLedger } = useApp();
 
-  const ledger = getLedger(projectId);
+  const ledger = getLedger(projectId) || { expenses: [] };
   const totalExpenses = useMemo(() => ledger.expenses.reduce((sum, e) => sum + e.amount, 0), [ledger.expenses]);
 
   return (
@@ -32,25 +32,40 @@ export function ExpenseListScreen({ route, navigation }) {
         </View>
 
         <FlatList
-          data={ledger.expenses}
+          data={ledger.expenses || []}
           keyExtractor={(e) => e.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => navigation.navigate('ExpenseDetails', { projectId, expense: item })} style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.iconWrap}>
-                  <MaterialCommunityIcons name="receipt" size={20} color="#fff" />
-                </View>
-                <View style={styles.meta}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.sub2}>
-                    {item.type} • {new Date(item.dateIso).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={styles.amount}>{formatINR(item.amount)}</Text>
-              </View>
-            </Pressable>
-          )}
+          renderItem={({ item }) => {
+  if (!item) return null; // 🔥 prevent crash
+
+  return (
+    <Pressable
+      onPress={() => navigation.navigate('ExpenseDetails', { projectId, expense: item })}
+      style={styles.card}
+    >
+      <View style={styles.row}>
+        <View style={styles.iconWrap}>
+          <MaterialCommunityIcons name="receipt" size={20} color="#fff" />
+        </View>
+
+        <View style={styles.meta}>
+          <Text style={styles.name}>{item?.name || 'No name'}</Text>
+
+          <Text style={styles.sub2}>
+            {item?.type || '—'} •{" "}
+            {item?.dateIso
+              ? new Date(item.dateIso).toLocaleDateString()
+              : 'No date'}
+          </Text>
+        </View>
+
+        <Text style={styles.amount}>
+          {formatINR(item?.amount || 0)}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}}
           ListEmptyComponent={
             <View style={styles.empty}>
               <MaterialCommunityIcons name="cash-remove" size={32} color="rgba(233,242,242,0.7)" />

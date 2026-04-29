@@ -84,14 +84,14 @@ export function AddExpenseScreen({ route, navigation }) {
               disabled={disabled}
               onPress={async () => {
                 if (!user) return;
-                const exp = await addExpense({
-                  projectId,
-                  managerId: user.id,
-                  name,
-                  type,
-                  amount: Number(amount),
-                  description,
-                });
+                const exp = await addExpense(projectId, {
+  managerId: user.id,
+  name,
+  type,
+  amount: Number(amount),
+  description,
+  dateIso: new Date().toISOString(), // ✅ VERY IMPORTANT
+});
                 navigation.replace('ExpenseDetails', { projectId, expense: exp });
               }}
               style={styles.btn}

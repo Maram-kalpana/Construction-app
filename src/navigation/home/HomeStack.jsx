@@ -22,6 +22,7 @@ import { ProjectModulesScreen } from '../../screens/projects/ProjectModulesScree
 import { ProjectsListScreen } from '../../screens/projects/ProjectsListScreen';
 import { VendorFormScreen } from '../../screens/vendors/VendorFormScreen';
 import { VendorsListScreen } from '../../screens/vendors/VendorsListScreen';
+import { StockFormScreen } from '../../screens/modules/stockFormScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +66,12 @@ export function HomeStack() {
       <Stack.Screen name="AddExpense" component={AddExpenseScreen} options={{ title: 'Add expense' }} />
       <Stack.Screen name="ExpenseList" component={ExpenseListScreen} options={{ title: 'Expenses' }} />
       <Stack.Screen name="ExpenseDetails" component={ExpenseDetailsScreen} options={{ title: 'Expense' }} />
+
+<Stack.Screen
+  name="StockForm"
+  component={StockFormScreen}
+  options={{ title: 'Stock entry' }}
+/>
     </Stack.Navigator>
   );
 }

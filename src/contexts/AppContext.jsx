@@ -1,5 +1,13 @@
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { getVendorsByType } from "../api/vendorApi";
 
 const STORAGE_KEY = '@constructionERP/appState_v2';
@@ -38,40 +46,37 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [projects] = useState(seedProjects);
   const [labourRegistry, setLabourRegistry] = useState(seedLabour);
-
-  // 🔥 IMPORTANT: vendors now from API only
   const [vendors, setVendors] = useState([]);
-
   const [attendance, setAttendance] = useState({});
+  const [stockEntries, setStockEntries] = useState([]);
 
-  /* -------------------- API: FETCH VENDORS -------------------- */
+  // ✅ LEDGER STATE (NEW)
+  const [ledgerData, setLedgerData] = useState({});
+
+  /* -------------------- FETCH VENDORS -------------------- */
 
   const fetchVendors = async () => {
     try {
       const res = await getVendorsByType();
-
-      console.log("API VENDORS:", res.data);
-
       const data = res?.data?.data || [];
 
       const formatted = data.map((v) => ({
-  id: v.id,
-  name: v.name || v.vendor_name || 'Vendor',
-  phone: v.phone,
-  category: v.category,
-}));
+        id: v.id,
+        name: v.name || v.vendor_name || 'Vendor',
+        phone: v.phone,
+        category: v.category,
+      }));
 
       setVendors(formatted);
-
     } catch (err) {
       console.log("Vendor API error:", err.response?.data || err.message);
     }
   };
 
-  /* -------------------- LOAD DATA -------------------- */
+  /* -------------------- LOAD -------------------- */
 
   useEffect(() => {
-    fetchVendors(); // 🔥 always load vendors from API
+    fetchVendors();
 
     let cancelled = false;
 
@@ -85,17 +90,11 @@ export function AppProvider({ children }) {
       try {
         const parsed = JSON.parse(source);
 
-        // ❌ DO NOT LOAD vendors from storage anymore
+        setLabourRegistry(parsed?.labourRegistry || []);
+        setAttendance(parsed?.attendance || {});
+        setLedgerData(parsed?.ledgerData || {}); // ✅ LOAD LEDGER
 
-        const parsedLabour = Array.isArray(parsed?.labourRegistry) ? parsed.labourRegistry : [];
-        setLabourRegistry(parsedLabour);
-
-        const parsedAttendance = parsed?.attendance || {};
-        setAttendance(parsedAttendance);
-
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
 
     return () => {
@@ -111,35 +110,31 @@ export function AppProvider({ children }) {
       JSON.stringify({
         labourRegistry: next.labourRegistry ?? labourRegistry,
         attendance: next.attendance ?? attendance,
-        // ❌ DO NOT store vendors
+        ledgerData: next.ledgerData ?? ledgerData, // ✅ SAVE LEDGER
       }),
     );
-  }, [labourRegistry, attendance]);
+  }, [labourRegistry, attendance, ledgerData]);
 
   /* -------------------- LABOUR -------------------- */
 
-  const upsertLabourPerson = useCallback(
-    async (person) => {
-      const id = person.id ?? makeId('lab');
+  const upsertLabourPerson = useCallback(async (person) => {
+    const id = person.id ?? makeId('lab');
 
-      const nextPerson = {
-        id,
-        name: person.name,
-        age: person.age,
-        gender: person.gender,
-        phone: person.phone,
-        vendorId: person.vendorId,
-      };
+    const nextPerson = {
+      id,
+      name: person.name,
+      age: person.age,
+      gender: person.gender,
+      phone: person.phone,
+      vendorId: person.vendorId,
+    };
 
-      const next = [...labourRegistry.filter((p) => p.id !== id), nextPerson];
+    const next = [...labourRegistry.filter((p) => p.id !== id), nextPerson];
+    setLabourRegistry(next);
+    await persist({ labourRegistry: next });
 
-      setLabourRegistry(next);
-      await persist({ labourRegistry: next });
-
-      return nextPerson;
-    },
-    [labourRegistry, persist],
-  );
+    return nextPerson;
+  }, [labourRegistry, persist]);
 
   /* -------------------- ATTENDANCE -------------------- */
 
@@ -147,49 +142,118 @@ export function AppProvider({ children }) {
     return `${projectId}_${day}_${labourId}`;
   }, []);
 
-  const attendanceFor = useCallback(
-    (projectId, day, labourId) => {
-      const key = attendanceKey(projectId, day, labourId);
-      return attendance[key] ?? false;
-    },
-    [attendance, attendanceKey],
-  );
+  const attendanceFor = useCallback((projectId, day, labourId) => {
+    const key = attendanceKey(projectId, day, labourId);
+    return attendance[key] ?? false;
+  }, [attendance, attendanceKey]);
 
-  const toggleAttendance = useCallback(
-    async (projectId, day, labourId) => {
-      const key = attendanceKey(projectId, day, labourId);
-      const next = { ...attendance, [key]: !attendance[key] };
+  const toggleAttendance = useCallback(async (projectId, day, labourId) => {
+    const key = attendanceKey(projectId, day, labourId);
+    const next = { ...attendance, [key]: !attendance[key] };
 
-      setAttendance(next);
-      await persist({ attendance: next });
+    setAttendance(next);
+    await persist({ attendance: next });
 
-      return next[key];
-    },
-    [attendance, attendanceKey, persist],
-  );
+    return next[key];
+  }, [attendance, attendanceKey, persist]);
+
+  /* -------------------- STOCK -------------------- */
+
+  const addStockEntry = useCallback((entry) => {
+    setStockEntries((prev) => [
+      { ...entry, id: makeId('stock') },
+      ...prev,
+    ]);
+  }, []);
+
+  /* -------------------- LEDGER FUNCTIONS -------------------- */
+
+  const getLedger = useCallback((projectId) => {
+    return ledgerData[projectId] || {
+      totalAmount: 0,
+      expenses: [],
+    };
+  }, [ledgerData]);
+
+  const setTotalAmount = useCallback(async (projectId, amount) => {
+    const next = {
+      ...ledgerData,
+      [projectId]: {
+        ...ledgerData[projectId],
+        totalAmount: amount,
+        expenses: ledgerData[projectId]?.expenses || [],
+      },
+    };
+
+    setLedgerData(next);
+    await persist({ ledgerData: next });
+  }, [ledgerData, persist]);
+
+  const addExpense = useCallback(async (projectId, expense) => {
+    const next = {
+      ...ledgerData,
+      [projectId]: {
+        totalAmount: ledgerData[projectId]?.totalAmount || 0,
+        expenses: [
+          ...(ledgerData[projectId]?.expenses || []),
+          {
+            id: makeId('exp'),
+            ...expense,
+          },
+        ],
+      },
+    };
+
+    setLedgerData(next);
+    await persist({ ledgerData: next });
+  }, [ledgerData, persist]);
+
+  const deleteExpense = useCallback(async (projectId, expenseId) => {
+    const next = {
+      ...ledgerData,
+      [projectId]: {
+        ...ledgerData[projectId],
+        expenses: ledgerData[projectId]?.expenses?.filter(
+          (e) => e.id !== expenseId
+        ) || [],
+      },
+    };
+
+    setLedgerData(next);
+    await persist({ ledgerData: next });
+  }, [ledgerData, persist]);
 
   /* -------------------- CONTEXT VALUE -------------------- */
 
-  const value = useMemo(
-    () => ({
-      projects,
-      labourRegistry,
-      vendors,
-      fetchVendors, // 🔥 exposed if needed
+  const value = useMemo(() => ({
+    projects,
+    labourRegistry,
+    vendors,
+    fetchVendors,
 
-      upsertLabourPerson,
-      attendanceFor,
-      toggleAttendance,
-      dateKey,
-    }),
-    [
-      projects,
-      labourRegistry,
-      vendors,
-      attendanceFor,
-      toggleAttendance,
-    ],
-  );
+    upsertLabourPerson,
+    attendanceFor,
+    toggleAttendance,
+
+    stockEntries,
+    addStockEntry,
+
+    // ✅ LEDGER EXPORTS
+    getLedger,
+    setTotalAmount,
+    addExpense,
+    deleteExpense,
+
+    dateKey,
+  }), [
+    projects,
+    labourRegistry,
+    vendors,
+    attendanceFor,
+    toggleAttendance,
+    stockEntries,
+    ledgerData,
+  ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

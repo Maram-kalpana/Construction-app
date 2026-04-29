@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -20,12 +19,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.maramkalpana.Constructionapp"
+      "package": "com.maramkalpana.constructionapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,7 +35,9 @@
           "photosPermission": "Allow access to your photos to attach a labour profile picture.",
           "cameraPermission": "Allow the camera to capture a labour profile photo."
         }
-      ]
+      ],
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
