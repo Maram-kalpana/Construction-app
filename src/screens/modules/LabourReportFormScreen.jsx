@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   KeyboardAvoidingView, Platform, ScrollView,
-  StyleSheet, Text, TextInput, View, TouchableOpacity
+  StyleSheet, Text, TextInput, View, TouchableOpacity,Pressable
 } from 'react-native';
 
 import { DatePickerField } from '../../components/DatePickerField';
@@ -13,6 +13,7 @@ import { colors } from '../../theme/theme';
 import { getLabours } from "../../api/labourApi";
 import { getTodayAttendance } from "../../api/attendanceApi";
 import { createReport } from "../../api/reportApi";
+
 
 export function LabourReportFormScreen({ route, navigation }) {
   const { projectId } = route.params || {};
@@ -119,7 +120,7 @@ const fetchData = async () => {
         >
           {/* ── TITLE ── */}
           <Text style={styles.h1}>Daily Labour Report</Text>
-          <Text style={styles.sub}>Date-wise entries and attended labour list.</Text>
+          <Text style={styles.sub}>Date-wise entries and attended labour list</Text>
 
           {/* ── ROW: Search + Date side by side ── */}
           <View style={styles.controlRow}>
@@ -129,7 +130,7 @@ const fetchData = async () => {
                 style={styles.searchInput}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Search party..."
+                placeholder="Search party"
                 placeholderTextColor={colors.mutedText}
               />
               {search.length > 0 && (
@@ -208,9 +209,12 @@ const fetchData = async () => {
                   <View style={styles.namesRow}>
                     <MaterialCommunityIcons name="account-multiple-outline" size={13} color={colors.mutedText} />
                     <Text style={styles.namesText} numberOfLines={1}>
-                      {v.persons.map((p) => p.full_name).slice(0, 4).join(', ')}
-                      {v.persons.length > 4 ? ` +${v.persons.length - 4} more` : ''}
-                    </Text>
+  {(v.persons || [])
+    .map((p) => String(p.full_name || ''))
+    .slice(0, 4)
+    .join(', ')}
+  {v.persons.length > 4 ? ` +${v.persons.length - 4} more` : ''}
+</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -219,9 +223,9 @@ const fetchData = async () => {
 
           <GradientButton
   title="Save Report"
-  onPress={handleSaveReport}   // 
-            left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
-          />
+  onPress={handleSaveReport}
+  left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
+/>
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>

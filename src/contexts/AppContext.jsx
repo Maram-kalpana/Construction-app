@@ -55,11 +55,11 @@ export function AppProvider({ children }) {
       const data = res?.data?.data || [];
 
       const formatted = data.map((v) => ({
-        id: v.id,
-        name: v.name,
-        phone: v.phone,
-        category: v.category,
-      }));
+  id: v.id,
+  name: v.name || v.vendor_name || 'Vendor',
+  phone: v.phone,
+  category: v.category,
+}));
 
       setVendors(formatted);
 

@@ -26,7 +26,11 @@ export function DatePickerField({ label = 'Date', value, onChange, style }) {
           justifyContent: 'space-between',
         }}
       >
-        <Text>{value || 'Select date'}</Text>
+        <Text>
+  {value
+    ? new Date(value).toISOString().split('T')[0]
+    : 'Select date'}
+</Text>
 
         <MaterialCommunityIcons name="calendar" size={20} color="#2563eb" />
       </Pressable>

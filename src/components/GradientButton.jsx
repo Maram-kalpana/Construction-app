@@ -2,26 +2,32 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors as appColors } from '../theme/theme';
-
-export function GradientButton({ title, onPress, colors = [appColors.buttonStart, appColors.buttonEnd], style, disabled, left }) {
+export const GradientButton = ({
+  title,
+  onPress,
+  left,
+  colors = ['#2f86de', '#62b6ff'],
+}) => {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      hitSlop={8}
-      style={({ pressed }) => [style, pressed && !disabled && styles.pressed, disabled && styles.disabled]}
-    >
-      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.btn}
+      >
         <View style={styles.glassOverlay} />
+
         <View style={styles.row}>
           {left ? <View style={styles.left}>{left}</View> : null}
+
+          {/* ✅ ALWAYS inside Text */}
           <Text style={styles.text}>{title}</Text>
         </View>
       </LinearGradient>
     </Pressable>
   );
-}
+};
 
 const styles = StyleSheet.create({
   btn: {
@@ -36,9 +42,20 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   left: { marginRight: 10 },
-  text: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
-  pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
-  disabled: { opacity: 0.6 },
+  text: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  pressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
+  },
 });

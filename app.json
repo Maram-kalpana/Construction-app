@@ -21,7 +21,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.maramkalpana.Constructionapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +38,11 @@
           "cameraPermission": "Allow the camera to capture a labour profile photo."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ad1b30ed-8d31-4701-86ce-267dc4417f0d"
+      }
+    }
   }
 }

@@ -25,6 +25,7 @@ import { addLabour } from "../../api/labourApi";
 import { deleteLabour, updateLabour } from "../../api/labourApi";
 import { markAttendance, getTodayAttendance } from "../../api/attendanceApi";
 import { Alert } from "react-native";
+import { getProjects } from "../../api/projectApi";
 
 export function LabourListScreen({ route, navigation }) {
   const { projectId, vendorId: filterVendorId, date: routeDate } = route.params || {};
@@ -54,9 +55,11 @@ const [showViewModal, setShowViewModal] = useState(false);
 const [selectedLabour, setSelectedLabour] = useState(null);
 const [actionType, setActionType] = useState(null);
 const [actionLabour, setActionLabour] = useState(null);
+const [projects, setProjects] = useState([]);
 useEffect(() => {
   fetchLabours();
   fetchAttendance();
+  fetchProjects(); 
 }, []);
 
 const fetchLabours = async () => {
@@ -101,6 +104,25 @@ const fetchAttendance = async () => {
 
   } catch (err) {
     console.log("Attendance fetch error:", err.response?.data || err.message);
+  }
+};
+const fetchProjects = async () => {
+  try {
+    const res = await getProjects();
+
+    console.log("PROJECT API:", res.data);
+
+    const data = res?.data?.data || [];
+
+    const formatted = data.map((p) => ({
+      id: p.id,
+      name: p.name,
+    }));
+
+    setProjects(formatted);
+
+  } catch (err) {
+    console.log("Project fetch error:", err.response?.data || err.message);
   }
 };
   const filtered = useMemo(() => {
@@ -489,14 +511,19 @@ const handleDelete = (id) => {
   />
 
   <SelectField
-    style={styles.half}
-    label="Project"
-    value={projectIdState}
-    onChange={setProjectIdState}
-    options={[
-      { label: 'Current Project', value: projectId },
-    ]}
-  />
+  style={styles.half}
+  label="Project"
+  value={projectIdState}
+  onChange={setProjectIdState}
+  placeholder="Select project"
+  options={[
+    { label: 'Select project', value: null },
+    ...(projects || []).map((p) => ({
+      label: p.name,
+      value: p.id,
+    })),
+  ]}
+/>
 </View>
 
             {/* ── Save ── */}
