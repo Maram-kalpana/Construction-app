@@ -31,7 +31,10 @@ function DetailRow({ icon, label, value }) {
 
 export function ExpenseDetailsScreen({ route, navigation }) {
   const { projectId, expense } = route.params;
-  const dateLabel = useMemo(() => new Date(expense.dateIso).toLocaleString(), [expense.dateIso]);
+ const dateLabel = useMemo(() => {
+  if (!expense?.dateIso) return 'No date';
+  return new Date(expense.dateIso).toLocaleString();
+}, [expense]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>

@@ -163,20 +163,26 @@ const getLedger = useCallback((projectId) => {
 }, [ledgerData]);
 
 const addExpense = useCallback((projectId, expense) => {
+  const newExpense = {
+    id: makeId('exp'),
+    ...expense,
+  };
+
   const next = {
     ...ledgerData,
     [projectId]: {
       totalAmount: ledgerData[projectId]?.totalAmount || 0,
       expenses: [
         ...(ledgerData[projectId]?.expenses || []),
-        { id: makeId('exp'), ...expense },
+        newExpense,
       ],
     },
   };
 
   setLedgerData(next);
-}, [ledgerData]);
 
+  return newExpense; // ✅ VERY IMPORTANT
+}, [ledgerData]);
   /* -------------------- CONTEXT VALUE -------------------- */
 
   const value = useMemo(() => ({
