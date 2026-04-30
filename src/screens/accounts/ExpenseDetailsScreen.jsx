@@ -55,19 +55,7 @@ export function ExpenseDetailsScreen({ route, navigation }) {
           <DetailRow icon="text" label="Description" value={expense.description ?? '—'} />
         </View>
 
-        <View style={styles.actions}>
-          <GradientButton
-            title="View all expenses"
-            onPress={() => navigation.navigate('ExpenseList', { projectId })}
-            colors={[colors.brandStart, colors.brandEnd]}
-            left={<MaterialCommunityIcons name="format-list-bulleted" size={18} color="#fff" />}
-          />
-          <GradientButton
-            title="Add another expense"
-            onPress={() => navigation.navigate('AddExpense', { projectId })}
-            left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
-          />
-        </View>
+        
       </View>
     </ScreenContainer>
   );
@@ -83,24 +71,32 @@ const styles = StyleSheet.create({
   heroTitle: { marginTop: 10, color: '#fff', fontSize: 18, fontWeight: '900' },
   heroAmount: { marginTop: 8, color: '#fff', fontSize: 24, fontWeight: '900' },
   detailCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    backgroundColor: 'rgba(11,18,19,0.78)',
-    padding: 14,
-    gap: 12,
-  },
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: '#e5e7eb', // light border
+  backgroundColor: '#ffffff', // ✅ white
+  padding: 14,
+  gap: 12,
+},
   row: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
   rowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowLabel: { color: colors.mutedText, fontWeight: '800' },
-  rowValue: { color: colors.text, fontWeight: '800', flex: 1, textAlign: 'right' },
+  width: 32,
+  height: 32,
+  borderRadius: 12,
+  backgroundColor: '#f3f4f6', // light gray
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+  rowLabel: {
+  color: '#6b7280', // muted gray
+  fontWeight: '800',
+},
+  rowValue: {
+  color: '#111827', // dark text
+  fontWeight: '800',
+  flex: 1,
+  textAlign: 'right',
+},
   actions: { marginTop: 14, gap: 12 },
 });

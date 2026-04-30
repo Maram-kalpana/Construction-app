@@ -79,7 +79,6 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
     marginBottom: 14,
     shadowColor: '#000',
     shadowOpacity: 0.06,
@@ -94,6 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 14,  // ← replaces gap on card
   },
   cardMeta: { flex: 1 },
   cardTitle: { fontSize: 17, fontWeight: '900', color: '#1a2f4e', marginBottom: 4 },
@@ -101,7 +101,6 @@ const styles = StyleSheet.create({
   note: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
     backgroundColor: '#f8fafd',
     borderRadius: 14,
     padding: 14,
@@ -109,5 +108,5 @@ const styles = StyleSheet.create({
     borderColor: '#e2eaf4',
     marginTop: 4,
   },
-  noteText: { flex: 1, fontSize: 13, color: '#7a8fa8', lineHeight: 18 },
+  noteText: { flex: 1, fontSize: 13, color: '#7a8fa8', lineHeight: 18, marginLeft: 10 },  // ← replaces gap on note
 });

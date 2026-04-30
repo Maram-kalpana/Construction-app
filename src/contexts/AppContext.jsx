@@ -1,4 +1,3 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
@@ -11,7 +10,6 @@ import React, {
 import { getVendorsByType } from "../api/vendorApi";
 
 const STORAGE_KEY = '@constructionERP/appState_v2';
-const LEGACY_STORAGE_KEY = '@constructionERP/appState';
 
 /* -------------------- HELPERS -------------------- */
 
@@ -19,39 +17,27 @@ function makeId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-function normalizePhone(phone) {
-  return String(phone || '').replace(/\D/g, '');
-}
-
 function dateKey(d = new Date()) {
   return d.toISOString().slice(0, 10);
 }
 
-function bundleKey(projectId, day = dateKey()) {
+function bundleKey(projectId, day) {
   return `${projectId}_${day}`;
 }
-
-/* -------------------- DEFAULT DATA -------------------- */
-
-const seedProjects = [
-  { id: 'p-001', name: 'Green Valley Apartments', location: 'Sector 14', status: 'Active' },
-];
-
-const seedLabour = [];
 
 /* -------------------- CONTEXT -------------------- */
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [projects] = useState(seedProjects);
-  const [labourRegistry, setLabourRegistry] = useState(seedLabour);
-  const [vendors, setVendors] = useState([]);
-  const [attendance, setAttendance] = useState({});
-  const [stockEntries, setStockEntries] = useState([]);
+  const [projects] = useState([
+    { id: 'p-001', name: 'Green Valley Apartments', location: 'Sector 14', status: 'Active' },
+  ]);
 
-  // ✅ LEDGER STATE (NEW)
+  const [vendors, setVendors] = useState([]);
+  const [materials, setMaterials] = useState({});
   const [ledgerData, setLedgerData] = useState({});
+  const [stockData, setStockData] = useState([]); // ✅ NEW
 
   /* -------------------- FETCH VENDORS -------------------- */
 
@@ -60,200 +46,160 @@ export function AppProvider({ children }) {
       const res = await getVendorsByType();
       const data = res?.data?.data || [];
 
-      const formatted = data.map((v) => ({
-        id: v.id,
-        name: v.name || v.vendor_name || 'Vendor',
-        phone: v.phone,
-        category: v.category,
-      }));
-
-      setVendors(formatted);
+      setVendors(
+        data.map((v) => ({
+          id: v.id,
+          name: v.name || 'Vendor',
+        }))
+      );
     } catch (err) {
-      console.log("Vendor API error:", err.response?.data || err.message);
+      console.log("Vendor error:", err);
     }
   };
 
-  /* -------------------- LOAD -------------------- */
-
   useEffect(() => {
     fetchVendors();
-
-    let cancelled = false;
-
-    (async () => {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      const legacyRaw = raw ? null : await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
-      const source = raw || legacyRaw;
-
-      if (cancelled || !source) return;
-
-      try {
-        const parsed = JSON.parse(source);
-
-        setLabourRegistry(parsed?.labourRegistry || []);
-        setAttendance(parsed?.attendance || {});
-        setLedgerData(parsed?.ledgerData || {}); // ✅ LOAD LEDGER
-
-      } catch {}
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  /* -------------------- PERSIST -------------------- */
+  /* -------------------- MATERIALS -------------------- */
 
-  const persist = useCallback(async (next) => {
-    await AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        labourRegistry: next.labourRegistry ?? labourRegistry,
-        attendance: next.attendance ?? attendance,
-        ledgerData: next.ledgerData ?? ledgerData, // ✅ SAVE LEDGER
-      }),
-    );
-  }, [labourRegistry, attendance, ledgerData]);
+  const getDailyBundle = useCallback((projectId, day) => {
+    return materials[bundleKey(projectId, day)] || {
+      materialsIn: [],
+      materialsOut: [],
+    };
+  }, [materials]);
 
-  /* -------------------- LABOUR -------------------- */
+  const addMaterialEntry = useCallback((projectId, payload, day) => {
+    const key = bundleKey(projectId, day);
 
-  const upsertLabourPerson = useCallback(async (person) => {
-    const id = person.id ?? makeId('lab');
-
-    const nextPerson = {
-      id,
-      name: person.name,
-      age: person.age,
-      gender: person.gender,
-      phone: person.phone,
-      vendorId: person.vendorId,
+    const existing = materials[key] || {
+      materialsIn: [],
+      materialsOut: [],
     };
 
-    const next = [...labourRegistry.filter((p) => p.id !== id), nextPerson];
-    setLabourRegistry(next);
-    await persist({ labourRegistry: next });
+    const listKey = payload.direction === 'out' ? 'materialsOut' : 'materialsIn';
 
-    return nextPerson;
-  }, [labourRegistry, persist]);
+    const updatedList = payload.id
+      ? existing[listKey].map((e) =>
+          e.id === payload.id ? { ...e, ...payload } : e
+        )
+      : [...existing[listKey], { ...payload, id: makeId('mat') }];
 
-  /* -------------------- ATTENDANCE -------------------- */
+    const next = {
+      ...materials,
+      [key]: {
+        ...existing,
+        [listKey]: updatedList,
+      },
+    };
 
-  const attendanceKey = useCallback((projectId, day, labourId) => {
-    return `${projectId}_${day}_${labourId}`;
-  }, []);
+    setMaterials(next);
+  }, [materials]);
 
-  const attendanceFor = useCallback((projectId, day, labourId) => {
-    const key = attendanceKey(projectId, day, labourId);
-    return attendance[key] ?? false;
-  }, [attendance, attendanceKey]);
+  const deleteMaterialEntry = useCallback((projectId, id, direction, day) => {
+    const key = bundleKey(projectId, day);
+    const existing = materials[key];
 
-  const toggleAttendance = useCallback(async (projectId, day, labourId) => {
-    const key = attendanceKey(projectId, day, labourId);
-    const next = { ...attendance, [key]: !attendance[key] };
+    if (!existing) return;
 
-    setAttendance(next);
-    await persist({ attendance: next });
+    const listKey = direction === 'out' ? 'materialsOut' : 'materialsIn';
 
-    return next[key];
-  }, [attendance, attendanceKey, persist]);
+    const next = {
+      ...materials,
+      [key]: {
+        ...existing,
+        [listKey]: existing[listKey].filter((e) => e.id !== id),
+      },
+    };
+
+    setMaterials(next);
+  }, [materials]);
+
+  const materialItemOptions = useCallback(() => {
+    const all = Object.values(materials)
+      .flatMap((b) => [...(b.materialsIn || []), ...(b.materialsOut || [])])
+      .map((e) => e.itemName);
+
+    return [...new Set(all)];
+  }, [materials]);
 
   /* -------------------- STOCK -------------------- */
 
-  const addStockEntry = useCallback((entry) => {
-    setStockEntries((prev) => [
-      { ...entry, id: makeId('stock') },
+const addStockEntry = useCallback((payload) => {
+  setStockData((prev) => {
+    // ✅ EDIT
+    if (payload.id) {
+      return prev.map((item) =>
+        item.id === payload.id ? { ...item, ...payload } : item
+      );
+    }
+
+    // ✅ NEW
+    return [
       ...prev,
-    ]);
-  }, []);
-
-  /* -------------------- LEDGER FUNCTIONS -------------------- */
-
-  const getLedger = useCallback((projectId) => {
-    return ledgerData[projectId] || {
-      totalAmount: 0,
-      expenses: [],
-    };
-  }, [ledgerData]);
-
-  const setTotalAmount = useCallback(async (projectId, amount) => {
-    const next = {
-      ...ledgerData,
-      [projectId]: {
-        ...ledgerData[projectId],
-        totalAmount: amount,
-        expenses: ledgerData[projectId]?.expenses || [],
+      {
+        id: makeId('stock'),
+        ...payload,
       },
-    };
+    ];
+  });
+}, []);
 
-    setLedgerData(next);
-    await persist({ ledgerData: next });
-  }, [ledgerData, persist]);
+const deleteStockEntry = useCallback((id) => {
+  setStockData((prev) => prev.filter((item) => item.id !== id));
+}, []);
 
-  const addExpense = useCallback(async (projectId, expense) => {
-    const next = {
-      ...ledgerData,
-      [projectId]: {
-        totalAmount: ledgerData[projectId]?.totalAmount || 0,
-        expenses: [
-          ...(ledgerData[projectId]?.expenses || []),
-          {
-            id: makeId('exp'),
-            ...expense,
-          },
-        ],
-      },
-    };
+const getStockByProject = useCallback((projectId) => {
+  return stockData.filter((s) => s.projectId === projectId);
+}, [stockData]);
+/* -------------------- LEDGER -------------------- */
 
-    setLedgerData(next);
-    await persist({ ledgerData: next });
-  }, [ledgerData, persist]);
+const getLedger = useCallback((projectId) => {
+  return ledgerData[projectId] || {
+    totalAmount: 0,
+    expenses: [],
+  };
+}, [ledgerData]);
 
-  const deleteExpense = useCallback(async (projectId, expenseId) => {
-    const next = {
-      ...ledgerData,
-      [projectId]: {
-        ...ledgerData[projectId],
-        expenses: ledgerData[projectId]?.expenses?.filter(
-          (e) => e.id !== expenseId
-        ) || [],
-      },
-    };
+const addExpense = useCallback((projectId, expense) => {
+  const next = {
+    ...ledgerData,
+    [projectId]: {
+      totalAmount: ledgerData[projectId]?.totalAmount || 0,
+      expenses: [
+        ...(ledgerData[projectId]?.expenses || []),
+        { id: makeId('exp'), ...expense },
+      ],
+    },
+  };
 
-    setLedgerData(next);
-    await persist({ ledgerData: next });
-  }, [ledgerData, persist]);
+  setLedgerData(next);
+}, [ledgerData]);
 
   /* -------------------- CONTEXT VALUE -------------------- */
 
   const value = useMemo(() => ({
-    projects,
-    labourRegistry,
-    vendors,
-    fetchVendors,
+  projects,
+  vendors,
 
-    upsertLabourPerson,
-    attendanceFor,
-    toggleAttendance,
+  // MATERIALS
+  getDailyBundle,
+  addMaterialEntry,
+  deleteMaterialEntry,
+  materialItemOptions,
 
-    stockEntries,
-    addStockEntry,
+  // STOCK
+  addStockEntry,
+  deleteStockEntry,   // ✅ ADD THIS (missing)
+  getStockByProject,
 
-    // ✅ LEDGER EXPORTS
-    getLedger,
-    setTotalAmount,
-    addExpense,
-    deleteExpense,
+  // LEDGER
+  getLedger,
+  addExpense,
 
-    dateKey,
-  }), [
-    projects,
-    labourRegistry,
-    vendors,
-    attendanceFor,
-    toggleAttendance,
-    stockEntries,
-    ledgerData,
-  ]);
+  dateKey,
+}), [projects, vendors, materials, ledgerData, stockData]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
@@ -265,5 +211,3 @@ export function useApp() {
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
 }
-
-export { bundleKey, dateKey, normalizePhone };

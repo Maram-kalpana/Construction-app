@@ -67,14 +67,13 @@ export function AccountsDashboardScreen({ route, navigation }) {
             left={<MaterialCommunityIcons name="plus" size={18} color="#fff" />}
           />
           <GradientButton
-            title="View expenses"
-            onPress={() => navigation.navigate('ExpenseList', { projectId })}
-            colors={[colors.brandStart, colors.brandEnd]}
-            left={<MaterialCommunityIcons name="format-list-bulleted" size={18} color="#fff" />}
-          />
+  title="View expenses"
+  onPress={() => navigation.navigate('ExpenseList', { projectId })}
+  left={<MaterialCommunityIcons name="format-list-bulleted" size={18} color="#fff" />}
+/>
         </View>
 
-        <View style={styles.totalEditor}>
+        {/* <View style={styles.totalEditor}>
           <Text style={styles.sectionTitle}>Total amount received</Text>
           <Text style={styles.sectionSub}>Update when funds are released for this project.</Text>
           <AppTextField
@@ -93,7 +92,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
             }}
             colors={['#2f86de', '#62b6ff']}
           />
-        </View>
+        </View> */}
       </ScrollView>
     </ScreenContainer>
   );

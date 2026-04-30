@@ -1,177 +1,291 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { SelectField } from '../../components/SelectField';
+import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import {
+  getMaterialEntries,
+  addMaterialEntryApi,
+  updateMaterialEntryApi,
+  deleteMaterialEntryApi,
+} from '../../api/materialApi';
+import { getProjects } from '../../api/projectApi';
+import { getItems } from '../../api/itemApi';
 
 export function MaterialFormScreen({ route, navigation }) {
-  const { projectId, entryId, direction: dirParam } = route.params;
+  const { projectId, entryId, direction: dirParam } = route.params || {};
   const direction = dirParam === 'out' ? 'out' : 'in';
 
-  // ✅ 1. get app FIRST
   const app = useApp();
-
-  // ✅ 2. extract safely
-  const getDailyBundle = app?.getDailyBundle;
-  const addMaterialEntry = app?.addMaterialEntry;
-  const deleteMaterialEntry = app?.deleteMaterialEntry;
-  const materialItemOptions = app?.materialItemOptions || (() => []);
   const vendors = app?.vendors || [];
   const dateKey = app?.dateKey || (() => new Date().toISOString().slice(0, 10));
 
-  // ✅ 3. compute today
-  const today = dateKey();
-
-  // ✅ 4. now safe to use
-  const bundle = getDailyBundle
-    ? getDailyBundle(projectId, today)
-    : { materialsIn: [], materialsOut: [] };
-
-  const list =
-    direction === 'out'
-      ? bundle.materialsOut || []
-      : bundle.materialsIn || [];
-
-  const editing = useMemo(
-    () => list.find((e) => e.id === entryId) ?? null,
-    [list, entryId]
-  );
-
-  // ✅ 5. state AFTER everything
-  const [itemName, setItemName] = useState('');
+  // ── Form state ──
+  const [selectedDate, setSelectedDate] = useState(dateKey());
+  const [itemId, setItemId] = useState(null);
   const [qty, setQty] = useState('');
-  const [supplier, setSupplier] = useState('');
   const [vendorId, setVendorId] = useState(null);
-  const [projectIdState, setProjectIdState] = useState(projectId || null);
+  const [selectedProject, setSelectedProject] = useState(projectId || null);
+  const [supplier, setSupplier] = useState('');
+  const [remarks, setRemarks] = useState('');
+
+  // ── Dropdown data ──
+  const [projects, setProjects] = useState([]);
+  const [itemsList, setItemsList] = useState([]);
+
+  // ── Edit mode — true when entryId passed ──
+  const isEditMode = !!entryId;
+  const [loadingEntry, setLoadingEntry] = useState(isEditMode);
 
   useEffect(() => {
-  if (!editing) return;
-  setItemName(editing.itemName ?? '');
-  setQty(String(editing.qty ?? ''));
-  setSupplier(editing.supplier ?? '');
-  setVendorId(editing.vendorId ?? null);
-  setProjectIdState(editing.projectId ?? projectId); // ✅ ADD THIS
-}, [editing]);
+    fetchDropdowns();
+    if (isEditMode) fetchEntry();
+  }, []);
 
-  const itemOptions = useMemo(
-    () => materialItemOptions(projectId).filter((name) => name.toLowerCase().includes(itemName.toLowerCase())).slice(0, 6),
-    [itemName, materialItemOptions, projectId],
-  );
-
-  const onSave = async () => {
-    if (itemName.trim().length < 2) {
-      Alert.alert('Missing', 'Enter item name.');
-      return;
+  // Fetch dropdowns (projects + items)
+  const fetchDropdowns = async () => {
+    try {
+      const [pRes, iRes] = await Promise.all([getProjects(), getItems()]);
+      if (pRes?.data?.success) setProjects(pRes.data.data);
+      if (iRes?.data?.success && iRes.data.data.length > 0) {
+        setItemsList(iRes.data.data);
+      } else {
+        setItemsList([
+          { id: 1, name: 'Cement' },
+          { id: 2, name: 'Steel' },
+          { id: 3, name: 'Sand' },
+        ]);
+      }
+    } catch (err) {
+      console.log('DROPDOWN ERROR:', err?.response?.data || err);
     }
-    await addMaterialEntry(
-      projectIdState,
-      {
-        id: editing?.id,
-        direction,
-        itemName,
-        qty,
-        supplier,
-        vendorId,
-      },
-      today,
-    );
-    navigation.goBack();
   };
 
+  // Fetch the specific entry from API and pre-fill form
+  const fetchEntry = async () => {
+    try {
+      // Fetch all entries and find the one matching entryId
+      const res = await getMaterialEntries({ project_id: projectId });
+      console.log('FETCH ENTRY RESPONSE:', JSON.stringify(res?.data, null, 2));
+
+      const raw = res?.data?.data;
+      const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+      const entry = list.find((e) => String(e.id) === String(entryId));
+
+      if (entry) {
+        setItemId(Number(entry.item_id) || null);
+        setQty(String(entry.qty || ''));
+        setVendorId(Number(entry.vendor_id) || null);
+        setSelectedProject(Number(entry.project_id) || projectId || null);
+        setSupplier(entry.supplier || '');
+        setRemarks(entry.remarks || '');
+        setSelectedDate(entry.entry_date || dateKey());
+        console.log('PRE-FILLED entry:', entry);
+      } else {
+        console.log('Entry not found for id:', entryId);
+      }
+    } catch (err) {
+      console.log('FETCH ENTRY ERROR:', err?.response?.data || err);
+    } finally {
+      setLoadingEntry(false);
+    }
+  };
+
+  // ── Save (add or update) ──
+  const onSave = async () => {
+    if (!itemId || !vendorId || !selectedProject) {
+      Alert.alert('Missing', 'Please select item, vendor and project');
+      return;
+    }
+    if (!qty.trim()) {
+      Alert.alert('Missing', 'Please enter quantity');
+      return;
+    }
+
+    try {
+      const formattedDate =
+        typeof selectedDate === 'string'
+          ? selectedDate
+          : new Date(selectedDate).toISOString().split('T')[0];
+
+      const payload = {
+        project_id: Number(selectedProject),
+        vendor_id: Number(vendorId),
+        item_id: Number(itemId),
+        qty: String(qty),
+        supplier: supplier || '',
+        remarks: remarks || '',
+        entry_date: formattedDate,
+      };
+
+      console.log('SAVE PAYLOAD:', payload);
+
+      if (isEditMode) {
+        await updateMaterialEntryApi(entryId, payload);
+        Alert.alert('Success', 'Entry updated');
+      } else {
+        await addMaterialEntryApi(payload);
+        Alert.alert('Success', 'Entry saved');
+      }
+
+      navigation.goBack();
+    } catch (err) {
+      console.log('SAVE ERROR:', err?.response?.data || err);
+      Alert.alert('Error', 'Failed to save entry');
+    }
+  };
+
+  // ── Delete ──
   const onDelete = () => {
-    if (!editing) return;
-    Alert.alert('Delete', 'Remove this material line?', [
+    Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteMaterialEntry(projectId, editing.id, direction, today);
-          navigation.goBack();
+          try {
+            await deleteMaterialEntryApi(entryId);
+            console.log('DELETED entry:', entryId);
+            navigation.goBack();
+          } catch (err) {
+            console.log('DELETE ERROR:', err?.response?.data || err);
+            Alert.alert('Error', 'Failed to delete entry');
+          }
         },
       },
     ]);
   };
 
+  if (loadingEntry) {
+    return (
+      <ScreenContainer edges={['top', 'left', 'right']}>
+        <View style={styles.loadingWrap}>
+          <Text style={styles.loadingText}>Loading entry...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Direction pill */}
           <View style={styles.pill}>
-            <Text style={styles.pillText}>{direction === 'out' ? 'Outgoing / used' : 'Incoming delivery'}</Text>
+            <Text style={styles.pillText}>
+              {direction === 'out' ? 'Outgoing / used' : 'Incoming delivery'}
+            </Text>
           </View>
-          <SelectField
-            label="Item name"
-            value={itemName || null}
-            onChange={(v) => setItemName(v || '')}
-            placeholder="e.g. Cement / Sand / Bricks"
-            options={[
-              { label: 'Select item', value: null },
-              { label: 'Cement (OPC 53)', value: 'Cement (OPC 53)' },
-              { label: 'River Sand', value: 'River Sand' },
-              { label: 'Bricks', value: 'Bricks' },
-              { label: 'Steel', value: 'Steel' },
-              ...itemOptions.map((name) => ({ label: name, value: name })),
-            ]}
-          />
-          <AppTextField
-            label="Qty / nos."
-            value={qty}
-            onChangeText={setQty}
-            placeholder="0"
+
+          {/* Date */}
+          <Text style={styles.sectionLabel}>Date</Text>
+          <DatePickerField
+            label={null}
+            value={selectedDate}
+            onChange={setSelectedDate}
+            style={{ marginBottom: 10 }}
           />
 
-          {/* ── Project ── */}
-<SelectField
-  label="Project"
-  value={projectIdState}
-  onChange={setProjectIdState}
-  placeholder="Select project"
-  options={[
-    { label: 'Current Project', value: projectId },
-  ]}
-/>
-          <AppTextField label="Supplier (optional)" value={supplier} onChangeText={setSupplier} placeholder="Optional" />
-          {/* ── Project ── */}
-<SelectField
-  label="Project"
-  value={projectIdState}
-  onChange={setProjectIdState}
-  placeholder="Select project"
-  options={[
-    { label: 'Current Project', value: projectId },
-  ]}
-/>
- <SelectField
+          {/* Item */}
+          <SelectField
+            label="Item"
+            value={itemId}
+            onChange={setItemId}
+            options={[
+              { label: 'Select item', value: null },
+              ...(itemsList || []).map((i) => ({ label: i.name, value: i.id })),
+            ]}
+          />
+
+          {/* Project */}
+          <SelectField
+            label="Project"
+            value={selectedProject}
+            onChange={setSelectedProject}
+            placeholder="Select project"
+            options={[
+              { label: 'Select project', value: null },
+              ...projects.map((p) => ({
+                label: p.name || p.project_name,
+                value: p.id,
+              })),
+            ]}
+          />
+
+          {/* Vendor */}
+          <SelectField
             label="Vendor"
             value={vendorId}
             onChange={setVendorId}
             placeholder="Select vendor"
             options={[
               { label: 'Select vendor', value: null },
-              { label: 'Ravi Hire', value: 'ven_demo_1' },
-              { label: 'ACC Dealer', value: 'ven_demo_2' },
-              { label: 'Sri Ganesh', value: 'ven_demo_3' },
               ...vendors.map((v) => ({ label: v.name, value: v.id })),
             ]}
           />
+
+          {/* Qty */}
+          <AppTextField
+            label="Qty / nos."
+            value={qty}
+            onChangeText={setQty}
+            placeholder="0"
+            keyboardType="numeric"
+          />
+
+          {/* Supplier */}
+          <AppTextField
+            label="Supplier"
+            value={supplier}
+            onChangeText={setSupplier}
+            placeholder="Supplier name (optional)"
+          />
+
+          {/* Remarks */}
+          <AppTextField
+            label="Remarks"
+            value={remarks}
+            onChangeText={setRemarks}
+            placeholder="Enter remarks"
+            multiline
+          />
+
+          {/* Save / Update */}
           <GradientButton
-            title={editing ? 'Update' : 'Save'}
+            title={isEditMode ? 'Update Entry' : 'Save Entry'}
             onPress={onSave}
             colors={['#2f86de', '#62b6ff']}
             left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
-          {editing ? (
+
+          {/* Delete — only in edit mode */}
+          {isEditMode && (
             <Pressable onPress={onDelete} style={styles.del}>
               <MaterialCommunityIcons name="delete-outline" size={20} color="#fca5a5" />
-              <Text style={styles.delText}>Delete</Text>
+              <Text style={styles.delText}>Delete Entry</Text>
             </Pressable>
-          ) : null}
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -181,6 +295,8 @@ export function MaterialFormScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 32 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { color: colors.mutedText, fontSize: 15 },
   pill: {
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
@@ -192,16 +308,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(45,127,218,0.22)',
   },
   pillText: { color: '#1d78d8', fontWeight: '900', fontSize: 12 },
-  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -4, marginBottom: 10 },
-  optionChip: {
-    backgroundColor: '#dbeafe',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.mutedText,
+    marginBottom: 6,
   },
-  optionText: { color: '#1e3a5f', fontWeight: '700', fontSize: 12 },
-  del: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, justifyContent: 'center' },
-  delText: { color: '#fca5a5', fontWeight: '800' },
+  del: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    justifyContent: 'center',
+  },
+  delText: { color: '#fca5a5', fontWeight: '800', marginLeft: 8 },
 });

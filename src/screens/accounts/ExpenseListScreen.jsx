@@ -86,26 +86,38 @@ const styles = StyleSheet.create({
   sub: { marginTop: 6, color: colors.mutedText },
   list: { padding: 16, paddingBottom: 28, gap: 12 },
   card: {
-    backgroundColor: 'rgba(11,18,19,0.82)',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.outline,
-  },
+  backgroundColor: '#ffffff', // ✅ white card
+  borderRadius: 16,
+  padding: 14,
+  borderWidth: 1,
+  borderColor: '#e5e7eb', // light gray border
+},
   row: { flexDirection: 'row', alignItems: 'center' },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: 'rgba(239,83,80,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
+  width: 40,
+  height: 40,
+  borderRadius: 14,
+  backgroundColor: '#fee2e2', // light red
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginRight: 12,
+},
   meta: { flex: 1 },
-  name: { color: colors.text, fontSize: 15, fontWeight: '900' },
-  sub2: { marginTop: 3, color: colors.mutedText, fontSize: 12 },
-  amount: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  name: {
+  color: '#111827', // dark text
+  fontSize: 15,
+  fontWeight: '900',
+},
+  sub2: {
+  marginTop: 3,
+  color: '#6b7280', // muted gray
+  fontSize: 12,
+},
+amount: {
+  color: '#16a34a', // ✅ green for money (better UX)
+  fontSize: 14,
+  fontWeight: '900',
+},
   empty: {
     marginTop: 24,
     alignItems: 'center',

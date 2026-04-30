@@ -17,7 +17,8 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
-import { getMachineById, addMachine, updateMachine, deleteMachine } from "../../api/machineApi";
+import { getMachineById, addMachine, updateMachine, deleteMachine, getMachines} from "../../api/machineApi";
+import { getProjects } from "../../api/projectApi";
 
 
 function parseTimeToMinutes(t) {
@@ -54,6 +55,8 @@ export function MachineFormScreen({ route, navigation }) {
   const [workDone, setWorkDone] = useState('');
   const [selectedMachineId, setSelectedMachineId] = useState(null);
   const [projectIdState, setProjectIdState] = useState(projectId || null);
+  const [machines, setMachines] = useState([]);
+const [projectsList, setProjectsList] = useState([]);
 
   useEffect(() => {
   if (!entryId) return;
@@ -76,6 +79,29 @@ const data = res?.data?.data || {};
   }
 };
 
+useEffect(() => {
+  if (projectsList.length) {
+    setProjectIdState((prev) => prev || projectsList[0].id);
+  }
+}, [projectsList]);
+
+useEffect(() => {
+  fetchDropdownData();
+}, []);
+
+const fetchDropdownData = async () => {
+  try {
+    const [machineRes, projectRes] = await Promise.all([
+      getMachines(),
+      getProjects(),
+    ]);
+
+    setMachines(machineRes?.data?.data || []);
+    setProjectsList(projectRes?.data?.data || []);
+  } catch (err) {
+    console.log("Dropdown fetch error", err);
+  }
+};
   // Auto-calculate whenever start or end changes
   useEffect(() => {
     const auto = diffHours(startTime, endTime);
@@ -145,17 +171,19 @@ navigation.goBack();
 
           {/* ── Equipment ── */}
           <Text style={styles.sectionLabel}>Equipment</Text>
-          <SelectField
-            label="Equipment"
-            value={selectedMachineId}
-onChange={setSelectedMachineId}
-            placeholder="Select equipment"
-            options={[
-  { label: 'JCB Excavator', value: 1 },
-  { label: 'Concrete Mixer', value: 2 },
-  { label: 'Vibrator', value: 3 },
-]}
-          />
+       <SelectField
+  label="Equipment"
+  value={selectedMachineId}
+  onChange={setSelectedMachineId}
+  placeholder="Select equipment"
+  options={[
+    { label: 'Select equipment', value: null }, // ✅ add this
+    ...machines.map((m) => ({
+      label: m.name,
+      value: m.id,
+    })),
+  ]}
+/>
 
 
           {/* ── Vendor ── */}
@@ -182,7 +210,11 @@ onChange={setSelectedMachineId}
   onChange={setProjectIdState}
   placeholder="Select project"
   options={[
-    { label: 'Current Project', value: projectId },
+    { label: 'Select project', value: null }, // ✅ add this
+    ...projectsList.map((p) => ({
+      label: p.name,
+      value: p.id,
+    })),
   ]}
 />
 

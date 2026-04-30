@@ -5,9 +5,38 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
+import { useEffect, useState } from 'react';
+import { getProjects } from '../../api/projectApi';
 
 export function AccountsProjectListScreen({ navigation }) {
-  const { projects } = useApp();
+ const [projects, setProjects] = useState([]);
+const [loading, setLoading] = useState(false);
+useEffect(() => {
+  fetchProjects();
+}, []);
+
+const fetchProjects = async () => {
+  setLoading(true);
+  try {
+    const res = await getProjects();
+
+    console.log("PROJECT API:", res.data);
+
+    if (res?.data?.success) {
+      setProjects(res.data.data);
+    } else {
+      setProjects([]);
+    }
+
+  } catch (err) {
+    console.log("PROJECT ERROR:", err?.response?.data || err);
+    setProjects([]);
+  }
+  setLoading(false);
+};
+if (loading) {
+  return <Text style={{ textAlign: 'center' }}>Loading projects...</Text>;
+}
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -16,9 +45,10 @@ export function AccountsProjectListScreen({ navigation }) {
           <Text style={styles.h1}>Accounts</Text>
           <Text style={styles.sub}>Pick a project to view budget, expenses, and balance.</Text>
         </View>
+    
         <FlatList
           data={projects}
-          keyExtractor={(p) => p.id}
+          keyExtractor={(p) => String(p.id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <Pressable onPress={() => navigation.navigate('Accounts', { projectId: item.id })} style={styles.card}>
