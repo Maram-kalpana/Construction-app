@@ -20,7 +20,7 @@ export function LabourModuleScreen({ route, navigation }) {
     {
       id: 'report',
       title: 'Daily Labour Report',
-      desc: 'Party name, mason count, work done per day.',
+      desc: 'Party name, male/female counts, and work done per day.',
       icon: 'file-document-outline',
       iconColor: '#2563eb',
       iconBg: '#dbeafe',

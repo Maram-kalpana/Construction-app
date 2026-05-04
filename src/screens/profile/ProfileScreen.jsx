@@ -1,17 +1,83 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView,
-  TouchableOpacity, Platform, Image, Alert
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  Image,
+  Alert,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
+import { AppTextField } from '../../components/AppTextField';
+import { changePassword } from '../../api/authApi';
 
 export function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [photoUri, setPhotoUri] = useState(null);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
+  const closePasswordModal = useCallback(() => {
+    setPasswordModalVisible(false);
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordSubmitting(false);
+  }, []);
+
+  const submitPasswordChange = useCallback(async () => {
+    if (!oldPassword.trim()) {
+      Alert.alert('Required', 'Please enter your current password.');
+      return;
+    }
+    if (!newPassword.trim() || newPassword.length < 6) {
+      Alert.alert('Invalid', 'New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Mismatch', 'New password and confirmation do not match.');
+      return;
+    }
+    if (oldPassword === newPassword) {
+      Alert.alert('Invalid', 'New password must be different from the current password.');
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      await changePassword({
+        current_password: oldPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+      Alert.alert('Success', 'Your password has been updated.');
+      closePasswordModal();
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
+        err?.message ||
+        'Could not change password. Please try again.';
+      Alert.alert('Error', String(msg));
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  }, [oldPassword, newPassword, confirmPassword, closePasswordModal]);
 
   React.useLayoutEffect(() => {
     navigation?.setOptions?.({ headerShown: false });
@@ -120,7 +186,7 @@ export function ProfileScreen({ navigation }) {
             icon="lock-reset"
             label="Change Password"
             isAction
-            onPress={() => Alert.alert('Change Password', 'Feature coming soon.')}
+            onPress={() => setPasswordModalVisible(true)}
           />
         </View>
 
@@ -132,6 +198,74 @@ export function ProfileScreen({ navigation }) {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      <Modal
+        visible={passwordModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closePasswordModal}
+      >
+        <View style={styles.modalRoot}>
+          <Pressable style={styles.modalBackdrop} onPress={closePasswordModal} />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalSheetWrap}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+          >
+            <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Change password</Text>
+              <Text style={styles.modalSub}>Enter your current password, then choose a new one.</Text>
+
+              <AppTextField
+                label="Current password"
+                value={oldPassword}
+                onChangeText={setOldPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                placeholder="••••••••"
+              />
+              <AppTextField
+                label="New password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                placeholder="At least 6 characters"
+              />
+              <AppTextField
+                label="Confirm new password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                placeholder="Re-enter new password"
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalBtnSecondary}
+                  onPress={closePasswordModal}
+                  disabled={passwordSubmitting}
+                >
+                  <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBtnPrimary, passwordSubmitting && styles.modalBtnDisabled]}
+                  onPress={submitPasswordChange}
+                  disabled={passwordSubmitting}
+                >
+                  {passwordSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.modalBtnPrimaryText}>Update</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -324,5 +458,90 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
+  },
+
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  modalSheetWrap: {
+    width: '100%',
+    maxHeight: '92%',
+  },
+  modalHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#e2e8f0',
+    marginBottom: 14,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    width: '100%',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px -4px 24px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 16,
+        }),
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1f2f4b',
+    marginBottom: 6,
+  },
+  modalSub: {
+    fontSize: 13,
+    color: '#8a99b5',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalBtnSecondary: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnSecondaryText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  modalBtnPrimary: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#4A90E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnPrimaryText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  modalBtnDisabled: {
+    opacity: 0.7,
   },
 });

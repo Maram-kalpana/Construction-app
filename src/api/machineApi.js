@@ -4,6 +4,10 @@ import api from "./axios";
 export const getEquipmentEntries = (params) =>
   api.get("/manager/equipment-entries", { params });
 
+// 🔥 SINGLE ENTRY (edit form)
+export const getMachineById = (id) =>
+  api.get(`/manager/equipment-entries/show/${id}`);
+
 // 🔥 ADD ENTRY
 export const addMachine = (data) =>
   api.post("/manager/equipment-entries/add", data);
@@ -13,8 +17,8 @@ export const updateMachine = (id, data) =>
   api.post(`/manager/equipment-entries/update/${id}`, data);
 
 // 🔥 DELETE ENTRY
-export const deleteMachine = (id) =>
-  api.post(`/manager/equipment-entries/delete/${id}`);
+export const deleteMachine = (id, payload) =>
+  api.post(`/manager/equipment-entries/delete/${id}`, payload ?? {});
 
 export const getMachines = () => {
   return api.get('/manager/get-machinery');

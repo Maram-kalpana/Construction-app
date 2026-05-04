@@ -1,8 +1,8 @@
 import api from "./axios";
 
-// GET LIST
-export const getLabours = () => {
-  return api.get("/manager/labours/list");
+// GET LIST (optional `project_id` query when backend supports it)
+export const getLabours = (params) => {
+  return api.get("/manager/labours/list", { params: params || undefined });
 };
 
 // ADD

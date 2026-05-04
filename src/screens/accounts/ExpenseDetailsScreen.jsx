@@ -55,7 +55,6 @@ export function ExpenseDetailsScreen({ route, navigation }) {
           <DetailRow icon="calendar" label="Date" value={dateLabel} />
           <DetailRow icon="tag" label="Type" value={expense.type} />
           <DetailRow icon="currency-inr" label="Amount" value={formatINR(expense.amount)} />
-          <DetailRow icon="text" label="Description" value={expense.description ?? '—'} />
         </View>
 
         

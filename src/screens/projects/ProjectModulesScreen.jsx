@@ -12,7 +12,7 @@ const modules = [
   { key: 'LabourModule', title: 'Labour', subtitle: 'Add labour and view daily labour report', icon: 'account-hard-hat' },
   { key: 'MachineList', title: 'Machinery', subtitle: 'Hours, party & output', icon: 'excavator' },
   { key: 'MaterialList', title: 'Material', subtitle: 'Inward / outward items', icon: 'cube-outline' },
-  { key: 'StockModule', title: 'Stock', subtitle: 'Cement consumption & stock report', icon: 'warehouse' },
+  { key: 'StockModule', title: 'Stock', subtitle: 'Balances and receipts for this project', icon: 'warehouse' },
 ];
 
 export function ProjectModulesScreen({ route, navigation }) {
@@ -51,16 +51,6 @@ const fetchProject = async () => {
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Project ID</Text>
             <Text style={styles.detailValue}>{projectId}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status</Text>
-            <Text style={styles.detailValue}>
-  {Number(project?.status) === 0
-    ? "Active"
-    : Number(project?.status) === 1
-    ? "Completed"
-    : "—"}
-</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Location</Text>

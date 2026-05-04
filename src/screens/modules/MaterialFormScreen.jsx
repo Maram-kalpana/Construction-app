@@ -24,7 +24,6 @@ import {
   updateMaterialEntryApi,
   deleteMaterialEntryApi,
 } from '../../api/materialApi';
-import { getProjects } from '../../api/projectApi';
 import { getItems } from '../../api/itemApi';
 
 export function MaterialFormScreen({ route, navigation }) {
@@ -33,19 +32,22 @@ export function MaterialFormScreen({ route, navigation }) {
 
   const app = useApp();
   const vendors = app?.vendors || [];
+  const projects = app?.projects || [];
   const dateKey = app?.dateKey || (() => new Date().toISOString().slice(0, 10));
+
+  const projectTitle =
+    projects.find((p) => String(p.id) === String(projectId))?.name || 'Project';
 
   // ── Form state ──
   const [selectedDate, setSelectedDate] = useState(dateKey());
   const [itemId, setItemId] = useState(null);
   const [qty, setQty] = useState('');
   const [vendorId, setVendorId] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(projectId || null);
+  const selectedProject = projectId || null;
   const [supplier, setSupplier] = useState('');
   const [remarks, setRemarks] = useState('');
 
   // ── Dropdown data ──
-  const [projects, setProjects] = useState([]);
   const [itemsList, setItemsList] = useState([]);
 
   // ── Edit mode — true when entryId passed ──
@@ -60,8 +62,7 @@ export function MaterialFormScreen({ route, navigation }) {
   // Fetch dropdowns (projects + items)
   const fetchDropdowns = async () => {
     try {
-      const [pRes, iRes] = await Promise.all([getProjects(), getItems()]);
-      if (pRes?.data?.success) setProjects(pRes.data.data);
+      const iRes = await getItems();
       if (iRes?.data?.success && iRes.data.data.length > 0) {
         setItemsList(iRes.data.data);
       } else {
@@ -91,7 +92,6 @@ export function MaterialFormScreen({ route, navigation }) {
         setItemId(Number(entry.item_id) || null);
         setQty(String(entry.qty || ''));
         setVendorId(Number(entry.vendor_id) || null);
-        setSelectedProject(Number(entry.project_id) || projectId || null);
         setSupplier(entry.supplier || '');
         setRemarks(entry.remarks || '');
         setSelectedDate(entry.entry_date || dateKey());
@@ -109,7 +109,7 @@ export function MaterialFormScreen({ route, navigation }) {
   // ── Save (add or update) ──
   const onSave = async () => {
     if (!itemId || !vendorId || !selectedProject) {
-      Alert.alert('Missing', 'Please select item, vendor and project');
+      Alert.alert('Missing', 'Please select item and vendor');
       return;
     }
     if (!qty.trim()) {
@@ -191,11 +191,16 @@ export function MaterialFormScreen({ route, navigation }) {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Direction pill */}
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>
-              {direction === 'out' ? 'Outgoing / used' : 'Incoming delivery'}
-            </Text>
+          <View style={styles.pillRow}>
+            <View style={styles.pill}>
+              <MaterialCommunityIcons name="office-building-outline" size={15} color="#1d78d8" />
+              <Text style={styles.pillText}>{projectTitle}</Text>
+            </View>
+            <View style={[styles.pill, styles.pillMuted]}>
+              <Text style={[styles.pillText, styles.pillTextMuted]}>
+                {direction === 'out' ? 'Outgoing / used' : 'Incoming delivery'}
+              </Text>
+            </View>
           </View>
 
           {/* Date */}
@@ -215,21 +220,6 @@ export function MaterialFormScreen({ route, navigation }) {
             options={[
               { label: 'Select item', value: null },
               ...(itemsList || []).map((i) => ({ label: i.name, value: i.id })),
-            ]}
-          />
-
-          {/* Project */}
-          <SelectField
-            label="Project"
-            value={selectedProject}
-            onChange={setSelectedProject}
-            placeholder="Select project"
-            options={[
-              { label: 'Select project', value: null },
-              ...projects.map((p) => ({
-                label: p.name || p.project_name,
-                value: p.id,
-              })),
             ]}
           />
 
@@ -297,17 +287,21 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 32 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { color: colors.mutedText, fontSize: 15 },
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   pill: {
-    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: 'rgba(45,127,218,0.10)',
-    marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(45,127,218,0.22)',
   },
+  pillMuted: { backgroundColor: 'rgba(15,23,42,0.06)', borderColor: 'rgba(15,23,42,0.1)' },
   pillText: { color: '#1d78d8', fontWeight: '900', fontSize: 12 },
+  pillTextMuted: { color: '#334155' },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',

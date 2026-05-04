@@ -2,10 +2,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import {
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,16 +16,23 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { SelectField } from '../../components/SelectField';
 import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
-import { addMaterialConsumption } from '../../api/stockApi';
-import { getProjects } from '../../api/projectApi';
-import { getVendorsByType } from '../../api/vendorApi';
 import { getItems } from '../../api/itemApi';
 import { colors } from '../../theme/theme';
 
-export function StockFormScreen({ route, navigation }) {
-  const { projectId } = route.params;
+function parseStockNum(s) {
+  const n = parseFloat(String(s ?? '').replace(/,/g, '').trim());
+  return Number.isFinite(n) ? n : NaN;
+}
 
-  const { dateKey } = useApp();
+function formatBalance(n) {
+  if (!Number.isFinite(n)) return '';
+  if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+  return n.toFixed(2).replace(/\.?0+$/, '');
+}
+
+export function StockFormScreen({ route, navigation }) {
+  const { projectId, entryId } = route.params || {};
+  const { dateKey, projects, vendors, addStockEntry, getStockByProject } = useApp();
   const today = dateKey();
 
   const [date, setDate] = useState(today);
@@ -37,96 +42,116 @@ export function StockFormScreen({ route, navigation }) {
   const [received, setReceived] = useState('');
   const [cum, setCum] = useState('');
   const [bal, setBal] = useState('');
-  const [lines, setLines] = useState([]);
-  const [work, setWork] = useState('');
-  const [qty, setQty] = useState('');
-  const [remarks, setRemarks] = useState('');
-  const [projects, setProjects] = useState([]);
-  const [vendorsList, setVendorsList] = useState([]);
+  const [editReason, setEditReason] = useState('');
   const [itemsList, setItemsList] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(projectId);
+
+  const isEditMode = !!entryId;
+  const projectTitle =
+    projects.find((p) => String(p.id) === String(projectId))?.name || 'Project';
 
   useEffect(() => {
-    fetchDropdownData();
-  }, []);
-
-  const fetchDropdownData = async () => {
-    try {
-      const [pRes, vRes, iRes] = await Promise.all([
-        getProjects(),
-        getVendorsByType(),
-        getItems(),
-      ]);
-
-      if (pRes?.data?.success) setProjects(pRes.data.data);
-      if (vRes?.data?.success) setVendorsList(vRes.data.data);
-
-      if (iRes?.data?.success && iRes.data.data.length > 0) {
-        setItemsList(iRes.data.data);
-      } else {
+    const loadItems = async () => {
+      try {
+        const iRes = await getItems();
+        if (iRes?.data?.success && iRes.data.data.length > 0) {
+          setItemsList(iRes.data.data);
+        } else {
+          setItemsList([
+            { id: 1, name: 'Cement' },
+            { id: 2, name: 'Steel' },
+            { id: 3, name: 'Sand' },
+          ]);
+        }
+      } catch (err) {
+        console.log('Items fetch error:', err?.response?.data || err);
         setItemsList([
           { id: 1, name: 'Cement' },
           { id: 2, name: 'Steel' },
           { id: 3, name: 'Sand' },
         ]);
       }
-    } catch (err) {
-      console.log('DROPDOWN ERROR:', err?.response?.data || err);
-    }
-  };
+    };
+    loadItems();
+  }, []);
 
-  const onAddLine = () => {
-    if (!work.trim()) {
-      Alert.alert('Missing', 'Enter work');
+  useEffect(() => {
+    if (!projectId) return;
+    if (!entryId) {
+      setDate(today);
+      setItemId(null);
+      setVendorId(null);
+      setOpenBal('');
+      setReceived('');
+      setCum('');
+      setBal('');
+      setEditReason('');
       return;
     }
-    setLines((prev) => [...prev, { id: Date.now().toString(), work, qty }]);
-    setWork('');
-    setQty('');
-  };
+    const list = getStockByProject(projectId);
+    const e = list.find((x) => x.id === entryId);
+    if (!e) return;
+    setDate(e.date || today);
+    setItemId(e.itemId != null ? Number(e.itemId) : null);
+    setVendorId(e.vendorId != null ? Number(e.vendorId) : null);
+    setOpenBal(String(e.openBal ?? ''));
+    setReceived(String(e.received ?? ''));
+    setCum(String(e.cum ?? ''));
+    setBal(String(e.bal ?? ''));
+    setEditReason('');
+  }, [entryId, projectId, getStockByProject, today]);
 
-  const onDeleteLine = (id) => {
-    setLines((prev) => prev.filter((l) => l.id !== id));
-  };
-
-  const onSave = async () => {
-    if (!itemId || !vendorId || !selectedProject) {
-      Alert.alert('Error', 'Select project, item and vendor');
+  useEffect(() => {
+    const o = parseStockNum(openBal);
+    const r = parseStockNum(received);
+    const c = parseStockNum(cum);
+    if (!Number.isFinite(o) && !Number.isFinite(r) && !Number.isFinite(c)) {
       return;
     }
-    if (lines.length === 0) {
-      Alert.alert('Error', 'Add at least one line');
+    const o2 = Number.isFinite(o) ? o : 0;
+    const r2 = Number.isFinite(r) ? r : 0;
+    const c2 = Number.isFinite(c) ? c : 0;
+    setBal(formatBalance(o2 + r2 - c2));
+  }, [openBal, received, cum]);
+
+  const onSave = () => {
+    if (!projectId) {
+      Alert.alert('Error', 'Missing project');
+      return;
+    }
+    if (!itemId || !vendorId) {
+      Alert.alert('Error', 'Select item and vendor');
+      return;
+    }
+    if (isEditMode && !editReason.trim()) {
+      Alert.alert('Required', 'Please enter a reason for editing before updating.');
       return;
     }
 
-    try {
-      // ✅ FIXED: safe date formatting — avoids Invalid Date on Android
-      const formattedDate =
-        typeof date === 'string' ? date : new Date(date).toISOString().split('T')[0];
+    const formattedDate =
+      typeof date === 'string' ? date : new Date(date).toISOString().split('T')[0];
 
-      for (let line of lines) {
-        await addMaterialConsumption({
-          project_id: Number(selectedProject),
-          vendor_id: Number(vendorId),
-          item_id: Number(itemId),
-          date: formattedDate,
-          work: line.work,
-          qty: String(line.qty),
-        });
-      }
+    const itemName =
+      (itemsList || []).find((i) => String(i.id) === String(itemId))?.name || '';
+    const vendorName =
+      (vendors || []).find((v) => String(v.id) === String(vendorId))?.name || '';
 
-      Alert.alert('Success', 'Stock saved');
+    addStockEntry({
+      ...(entryId ? { id: entryId } : {}),
+      projectId,
+      date: formattedDate,
+      itemId,
+      itemName,
+      vendorId,
+      vendorName,
+      openBal: openBal.trim(),
+      received: received.trim(),
+      cum: cum.trim(),
+      bal: bal.trim(),
+      ...(isEditMode ? { editReason: editReason.trim() } : {}),
+    });
 
-      navigation.navigate('StockModule', {
-        projectId: selectedProject,
-        vendorId: vendorId,
-        itemId: itemId,
-        refresh: true,
-      });
-    } catch (err) {
-      console.log('SAVE ERROR:', err?.response?.data || err);
-      Alert.alert('Error', 'Failed to save');
-    }
+    Alert.alert('Success', isEditMode ? 'Stock updated' : 'Stock saved');
+    navigation.navigate('StockModule', { projectId });
   };
 
   return (
@@ -136,36 +161,20 @@ export function StockFormScreen({ route, navigation }) {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll}>
-
-          <Text style={styles.h1}>Cement & stock</Text>
+          <Text style={styles.h1}>Stock</Text>
           <Text style={styles.sub}>
-            Consumption by work, opening balance, receipts, and closing balance.
+            Opening balance, receipts, cumulative use, and closing balance for this project.
           </Text>
 
-          {/* Date + Project — gap replaced with marginRight on first child */}
-          <View style={styles.topRow}>
-            <View style={styles.topLeft}>
-              <DatePickerField label="Date" value={date} onChange={setDate} />
-            </View>
-            <View style={styles.topRight}>
-              <SelectField
-                label="Project"
-                value={selectedProject}
-                onChange={setSelectedProject}
-                options={[
-                  { label: 'Select project', value: null },
-                  ...projects.map((p) => ({
-                    label: p.name || p.project_name,
-                    value: p.id,
-                  })),
-                ]}
-              />
-            </View>
+          <View style={styles.pill}>
+            <MaterialCommunityIcons name="office-building-outline" size={16} color="#1d78d8" />
+            <Text style={styles.pillText}>{projectTitle}</Text>
           </View>
 
-          {/* STOCK REPORT */}
+          <DatePickerField label="Date" value={date} onChange={setDate} style={{ marginBottom: 14 }} />
+
           <View style={styles.card}>
-            <Text style={styles.section}>Cement stock report</Text>
+            <Text style={styles.section}>Stock report</Text>
 
             <SelectField
               label="Item"
@@ -183,105 +192,64 @@ export function StockFormScreen({ route, navigation }) {
               onChange={setVendorId}
               options={[
                 { label: 'Select vendor', value: null },
-                ...(vendorsList || []).map((v) => ({ label: v.name, value: v.id })),
+                ...(vendors || []).map((v) => ({ label: v.name, value: v.id })),
               ]}
             />
 
-            {/* gap replaced with marginRight on left field */}
             <View style={styles.fieldRow}>
               <AppTextField
                 label="Open bal."
                 value={openBal}
                 onChangeText={setOpenBal}
                 style={styles.fieldLeft}
+                keyboardType="decimal-pad"
               />
               <AppTextField
                 label="Received"
                 value={received}
                 onChangeText={setReceived}
                 style={styles.fieldRight}
+                keyboardType="decimal-pad"
               />
             </View>
 
             <View style={styles.fieldRow}>
               <AppTextField
-                label="Cumulative"
+                label="Cumulative (used)"
                 value={cum}
                 onChangeText={setCum}
                 style={styles.fieldLeft}
+                keyboardType="decimal-pad"
               />
               <AppTextField
                 label="Balance"
                 value={bal}
                 onChangeText={setBal}
                 style={styles.fieldRight}
+                editable={false}
+                placeholder="Auto"
               />
             </View>
-          </View>
+            <Text style={styles.hint}>Balance = Open + Received − Cumulative (auto)</Text>
 
-          {/* CONSUMPTION */}
-          <View style={styles.card}>
-            <Text style={styles.section}>Cement consumption</Text>
-
-            <FlatList
-              data={lines}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <View style={styles.lineRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.lineWork}>{item.work}</Text>
-                    <Text style={styles.lineQty}>Qty: {item.qty || '-'}</Text>
-                  </View>
-                  <Pressable onPress={() => onDeleteLine(item.id)}>
-                    <MaterialCommunityIcons name="delete" size={20} color="red" />
-                  </Pressable>
-                </View>
-              )}
-              ListEmptyComponent={
-                <Text style={styles.empty}>No consumption lines yet.</Text>
-              }
-            />
-
-            <AppTextField
-              label="Work"
-              value={work}
-              onChangeText={setWork}
-              placeholder="PCC / Brick work"
-            />
-
-            <AppTextField
-              label="Qty (bags)"
-              value={qty}
-              onChangeText={setQty}
-              keyboardType="numeric"
-            />
-
-            <GradientButton
-              title="Add consumption line"
-              onPress={onAddLine}
-              colors={['#2f86de', '#62b6ff']}
-            />
-          </View>
-
-          {/* REMARKS */}
-          <View style={styles.card}>
-            <Text style={styles.section}>Remarks / details report</Text>
-            <AppTextField
-              label="Narrative notes"
-              value={remarks}
-              onChangeText={setRemarks}
-              multiline
-              numberOfLines={5}
-            />
+            {isEditMode && (
+              <AppTextField
+                label="Reason for editing"
+                value={editReason}
+                onChangeText={setEditReason}
+                placeholder="Required to save changes"
+                multiline
+                style={{ marginTop: 4 }}
+              />
+            )}
           </View>
 
           <GradientButton
-            title="Save stock"
+            title={isEditMode ? 'Update stock' : 'Save stock'}
             onPress={onSave}
             colors={['#2f86de', '#62b6ff']}
+            left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
           />
-
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -293,6 +261,22 @@ const styles = StyleSheet.create({
 
   h1: { fontSize: 22, fontWeight: '900', color: colors.text },
   sub: { marginTop: 6, color: colors.mutedText, marginBottom: 12 },
+  hint: { fontSize: 12, color: colors.mutedText, marginTop: 6, marginBottom: 4 },
+
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(45,127,218,0.10)',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(45,127,218,0.22)',
+  },
+  pillText: { color: '#1d78d8', fontWeight: '900', fontSize: 12 },
 
   card: {
     borderRadius: 20,
@@ -304,26 +288,7 @@ const styles = StyleSheet.create({
   },
   section: { fontWeight: '900', marginBottom: 10 },
 
-  // ✅ gap removed — marginRight on left field
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  topLeft: { flex: 1, marginRight: 10 },
-  topRight: { flex: 1 },
-
   fieldRow: { flexDirection: 'row', marginBottom: 0 },
   fieldLeft: { flex: 1, marginRight: 10 },
   fieldRight: { flex: 1 },
-
-  lineRow: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: colors.outline,
-  },
-  lineWork: { fontWeight: '800' },
-  lineQty: { color: colors.mutedText, fontSize: 12 },
-  empty: { color: colors.mutedText, marginBottom: 10 },
 });

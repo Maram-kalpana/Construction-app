@@ -6,10 +6,15 @@ export const GradientButton = ({
   title,
   onPress,
   left,
+  disabled = false,
   colors = ['#2f86de', '#62b6ff'],
 }) => {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
+      style={({ pressed }) => [pressed && !disabled && styles.pressed, disabled && styles.disabled]}
+    >
       <LinearGradient
         colors={colors}
         start={{ x: 0, y: 0 }}
@@ -58,4 +63,5 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     transform: [{ scale: 0.99 }],
   },
+  disabled: { opacity: 0.45 },
 });

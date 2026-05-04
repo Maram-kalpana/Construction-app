@@ -13,6 +13,7 @@ import { LabourFormScreen } from '../../screens/modules/LabourFormScreen';
 import { LabourListScreen } from '../../screens/modules/LabourListScreen';
 import { LabourModuleScreen } from '../../screens/modules/LabourModuleScreen';
 import { LabourReportFormScreen } from '../../screens/modules/LabourReportFormScreen';
+import { LabourReportPartyEditScreen } from '../../screens/modules/LabourReportPartyEditScreen';
 import { MachineFormScreen } from '../../screens/modules/MachineFormScreen';
 import { MachineListScreen } from '../../screens/modules/MachineListScreen';
 import { MaterialFormScreen } from '../../screens/modules/MaterialFormScreen';
@@ -54,11 +55,18 @@ export function HomeStack() {
       <Stack.Screen name="LabourList" component={LabourListScreen} options={{ title: "Today's labour" }} />
       <Stack.Screen name="LabourForm" component={LabourFormScreen} options={{ title: 'Add labour' }} />
       <Stack.Screen name="LabourReportForm" component={LabourReportFormScreen} options={{ title: 'Add labour report' }} />
+      <Stack.Screen
+        name="LabourReportPartyEdit"
+        component={LabourReportPartyEditScreen}
+        options={({ route }) => ({
+          title: route.params?.vendorName ? String(route.params.vendorName) : 'Party work',
+        })}
+      />
       <Stack.Screen name="MachineList" component={MachineListScreen} options={{ title: 'Machinery' }} />
       <Stack.Screen name="MachineForm" component={MachineFormScreen} options={{ title: 'Machine entry' }} />
       <Stack.Screen name="MaterialList" component={MaterialListScreen} options={{ title: 'Materials' }} />
       <Stack.Screen name="MaterialForm" component={MaterialFormScreen} options={{ title: 'Material entry' }} />
-      <Stack.Screen name="StockModule" component={StockModuleScreen} options={{ title: 'Stock & cement' }} />
+      <Stack.Screen name="StockModule" component={StockModuleScreen} options={{ title: 'Stock' }} />
       <Stack.Screen name="VendorsList" component={VendorsListScreen} options={{ title: 'Vendors' }} />
       <Stack.Screen name="VendorForm" component={VendorFormScreen} options={{ title: 'Vendor' }} />
       <Stack.Screen name="AccountsProjectList" component={AccountsProjectListScreen} options={{ title: 'Select project' }} />

@@ -17,13 +17,12 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
-import { getMachineById, addMachine, updateMachine, deleteMachine, getMachines} from "../../api/machineApi";
-import { getProjects } from "../../api/projectApi";
+import { getMachineById, addMachine, updateMachine, deleteMachine, getMachines } from '../../api/machineApi';
 
 
 function parseTimeToMinutes(t) {
   const s = String(t || '').trim();
-  const m = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/i);
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
   if (!m) return null;
   let h = Number(m[1]);
   const min = Number(m[2]);
@@ -32,6 +31,15 @@ function parseTimeToMinutes(t) {
   if (ap === 'am' && h === 12) h = 0;
   if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
   return h * 60 + min;
+}
+
+/** MySQL TIME column expects HH:mm:ss (24h). */
+function toMysqlTime(raw) {
+  const mins = parseTimeToMinutes(raw);
+  if (mins == null) return String(raw || '').trim();
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
 }
 
 function diffHours(start, end) {
@@ -43,65 +51,56 @@ function diffHours(start, end) {
 }
 
 export function MachineFormScreen({ route, navigation }) {
-  const { projectId, entryId } = route.params;
-  const { vendors, dateKey } = useApp();
+  const { projectId, entryId, workDate: routeWorkDate } = route.params || {};
+  const { vendors, dateKey, projects } = useApp();
   const today = dateKey();
-  
-  const [partyName, setPartyName] = useState('');
+  const workDate =
+    routeWorkDate && String(routeWorkDate).length >= 8 ? String(routeWorkDate).slice(0, 10) : today;
+
+  const projectTitle =
+    (projects || []).find((p) => String(p.id) === String(projectId))?.name || 'Project';
+
   const [vendorId, setVendorId] = useState(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [totalHrs, setTotalHrs] = useState('');
   const [workDone, setWorkDone] = useState('');
   const [selectedMachineId, setSelectedMachineId] = useState(null);
-  const [projectIdState, setProjectIdState] = useState(projectId || null);
   const [machines, setMachines] = useState([]);
-const [projectsList, setProjectsList] = useState([]);
+  const [editReason, setEditReason] = useState('');
 
   useEffect(() => {
-  if (!entryId) return;
+    if (!entryId) return;
+    fetchMachine();
+  }, [entryId]);
 
-  fetchMachine();
-}, [entryId]);
+  const fetchMachine = async () => {
+    try {
+      const res = await getMachineById(entryId);
+      const data = res?.data?.data || {};
+      setVendorId(data.vendor_id || null);
+      setStartTime(data.start_time || '');
+      setEndTime(data.end_time || '');
+      setTotalHrs(String(data.total_hours || ''));
+      setWorkDone(data.work_done || '');
+      setSelectedMachineId(data.equipment_id || null);
+    } catch (err) {
+      console.log('Fetch machine error', err);
+    }
+  };
 
-const fetchMachine = async () => {
-  try {
-    const res = await getMachineById(entryId);
-const data = res?.data?.data || {};
-    setPartyName(data.name || '');
-    setVendorId(data.vendor_id || null);
-    setStartTime(data.start_time || '');
-    setEndTime(data.end_time || '');
-    setTotalHrs(String(data.total_hours || ''));
-    setWorkDone(data.work_done || '');
-  } catch (err) {
-    console.log("Fetch machine error", err);
-  }
-};
+  useEffect(() => {
+    fetchDropdownData();
+  }, []);
 
-useEffect(() => {
-  if (projectsList.length) {
-    setProjectIdState((prev) => prev || projectsList[0].id);
-  }
-}, [projectsList]);
-
-useEffect(() => {
-  fetchDropdownData();
-}, []);
-
-const fetchDropdownData = async () => {
-  try {
-    const [machineRes, projectRes] = await Promise.all([
-      getMachines(),
-      getProjects(),
-    ]);
-
-    setMachines(machineRes?.data?.data || []);
-    setProjectsList(projectRes?.data?.data || []);
-  } catch (err) {
-    console.log("Dropdown fetch error", err);
-  }
-};
+  const fetchDropdownData = async () => {
+    try {
+      const machineRes = await getMachines();
+      setMachines(machineRes?.data?.data || []);
+    } catch (err) {
+      console.log('Dropdown fetch error', err);
+    }
+  };
   // Auto-calculate whenever start or end changes
   useEffect(() => {
     const auto = diffHours(startTime, endTime);
@@ -111,56 +110,70 @@ const fetchDropdownData = async () => {
   
 
   const onSave = async () => {
-  if (!selectedMachineId) {
-  Alert.alert("Missing", "Please select equipment");
-  return;
-}
-
-  const payload = {
-  project_id: projectIdState,
-  equipment_id: selectedMachineId, // ✅ now exists
-  vendor_id: vendorId,
-  start_time: startTime,
-  end_time: endTime,
-  total_hours: totalHrs,
-  work_done: workDone,
-  date: today, // ⚠️ don’t forget this
-};
-  console.log("PAYLOAD:", payload); // 👈 DEBUG
-
-  try {
-    if (entryId) {
-      await updateMachine(entryId, payload);
-      Alert.alert("Success", "Updated successfully");
-    } else {
-      await addMachine(payload);
-      Alert.alert("Success", "Added successfully");
+    if (!selectedMachineId) {
+      Alert.alert('Missing', 'Please select equipment');
+      return;
+    }
+    if (!projectId) {
+      Alert.alert('Missing', 'Project not found');
+      return;
+    }
+    if (entryId && !editReason.trim()) {
+      Alert.alert('Required', 'Please enter reason for editing this entry.');
+      return;
     }
 
-    navigation.goBack();
-  } catch (err) {
-    console.log("Save error", err?.response?.data || err.message);
-    Alert.alert("Error", "Failed to save");
-  }
-};
+    const startSql = toMysqlTime(startTime);
+    const endSql = toMysqlTime(endTime);
+    if (!startSql || !endSql || parseTimeToMinutes(startTime) == null || parseTimeToMinutes(endTime) == null) {
+      Alert.alert('Invalid time', 'Use times like 9:00 AM or 17:30 so they can be saved correctly.');
+      return;
+    }
+
+    const payload = {
+      project_id: projectId,
+      equipment_id: selectedMachineId,
+      vendor_id: vendorId,
+      start_time: startSql,
+      end_time: endSql,
+      total_hours: totalHrs,
+      work_done: workDone,
+      date: workDate,
+      ...(entryId ? { edit_reason: editReason.trim() } : {}),
+    };
+
+    try {
+      if (entryId) {
+        await updateMachine(entryId, payload);
+        Alert.alert('Success', 'Updated successfully');
+      } else {
+        await addMachine(payload);
+        Alert.alert('Success', 'Added successfully');
+      }
+      navigation.goBack();
+    } catch (err) {
+      console.log('Save error', err?.response?.data || err.message);
+      Alert.alert('Error', 'Failed to save');
+    }
+  };
+
   const onDelete = () => {
-  Alert.alert('Delete', 'Remove this machinery row?', [
-    { text: 'Cancel', style: 'cancel' },
-    {
-      text: 'Delete',
-      style: 'destructive',
-      onPress: async () => {
-        try {
-          await deleteMachine(entryId);
-          Alert.alert("Success", entryId ? "Updated successfully" : "Added successfully");
-navigation.goBack();
-        } catch (err) {
-          console.log("Delete error", err);
-        }
+    Alert.alert('Delete', 'Remove this machinery row?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMachine(entryId);
+            navigation.goBack();
+          } catch (err) {
+            console.log('Delete error', err);
+          }
+        },
       },
-    },
-  ]);
-};
+    ]);
+  };
 
   const hoursValid = !!diffHours(startTime, endTime);
 
@@ -168,23 +181,25 @@ navigation.goBack();
     <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.projectPill}>
+            <MaterialCommunityIcons name="office-building-outline" size={16} color="#1d78d8" />
+            <Text style={styles.projectPillText}>{projectTitle}</Text>
+          </View>
 
-          {/* ── Equipment ── */}
           <Text style={styles.sectionLabel}>Equipment</Text>
-       <SelectField
-  label="Equipment"
-  value={selectedMachineId}
-  onChange={setSelectedMachineId}
-  placeholder="Select equipment"
-  options={[
-    { label: 'Select equipment', value: null }, // ✅ add this
-    ...machines.map((m) => ({
-      label: m.name,
-      value: m.id,
-    })),
-  ]}
-/>
-
+          <SelectField
+            label="Equipment"
+            value={selectedMachineId}
+            onChange={setSelectedMachineId}
+            placeholder="Select equipment"
+            options={[
+              { label: 'Select equipment', value: null },
+              ...machines.map((m) => ({
+                label: m.name,
+                value: m.id,
+              })),
+            ]}
+          />
 
           {/* ── Vendor ── */}
           <Text style={styles.sectionLabel}>Vendor</Text>
@@ -194,29 +209,13 @@ navigation.goBack();
             onChange={setVendorId}
             placeholder="Select vendor"
             options={[
-  { label: 'Select vendor', value: null },
-  ...vendors.map((v) => ({
-    label: v.name,
-    value: v.id,
-  })),
-]}
+              { label: 'Select vendor', value: null },
+              ...vendors.map((v) => ({
+                label: v.name,
+                value: v.id,
+              })),
+            ]}
           />
-
-          {/* ── Project ── */}
-<Text style={styles.sectionLabel}>Project</Text>
-<SelectField
-  label="Project"
-  value={projectIdState}
-  onChange={setProjectIdState}
-  placeholder="Select project"
-  options={[
-    { label: 'Select project', value: null }, // ✅ add this
-    ...projectsList.map((p) => ({
-      label: p.name,
-      value: p.id,
-    })),
-  ]}
-/>
 
           {/* ── Time ── */}
           <Text style={styles.sectionLabel}>Working Hours</Text>
@@ -279,6 +278,20 @@ navigation.goBack();
             placeholder="Enter work details..."
           />
 
+          {entryId ? (
+            <>
+              <Text style={styles.sectionLabel}>Edit audit</Text>
+              <AppTextField
+                label="Reason for editing"
+                value={editReason}
+                onChangeText={setEditReason}
+                multiline
+                numberOfLines={3}
+                placeholder="Required — why are you changing this row?"
+              />
+            </>
+          ) : null}
+
           {/* ── Save ── */}
           <GradientButton
             title={entryId ? 'Update Row' : 'Save Row'}
@@ -302,6 +315,21 @@ navigation.goBack();
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 40 },
+
+  projectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(45,127,218,0.10)',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(45,127,218,0.22)',
+  },
+  projectPillText: { color: '#1d78d8', fontWeight: '900', fontSize: 12 },
 
   sectionLabel: {
     color: '#1a2f4e',

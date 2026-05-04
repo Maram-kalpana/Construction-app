@@ -8,6 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { getVendorsByType } from "../api/vendorApi";
+import { sameScopedProject } from "../utils/labourProjectScope";
 
 const STORAGE_KEY = '@constructionERP/appState_v2';
 
@@ -39,17 +40,62 @@ export function AppProvider({ children }) {
   const [ledgerData, setLedgerData] = useState({});
   const [stockData, setStockData] = useState([]); // ✅ NEW
 
+  /** Local labour work log lines keyed by date + vendor (shown on daily labour report cards). */
+  const [labourWorkEntries, setLabourWorkEntries] = useState([]);
+
+  const addLabourWorkEntry = useCallback((entry) => {
+    const projectIdNorm =
+      entry.projectId != null && entry.projectId !== ''
+        ? String(entry.projectId)
+        : undefined;
+    setLabourWorkEntries((prev) => [
+      ...prev,
+      {
+        id: makeId('lwork'),
+        createdAt: Date.now(),
+        ...entry,
+        projectId: projectIdNorm,
+      },
+    ]);
+  }, []);
+
+  const updateLabourWorkEntry = useCallback((id, patch) => {
+    if (!id) return;
+    const next = { ...patch };
+    if (next.projectId != null && next.projectId !== '') {
+      next.projectId = String(next.projectId);
+    }
+    setLabourWorkEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...next } : e))
+    );
+  }, []);
+
+  const removeLabourWorkEntriesForVendorDate = useCallback((date, vendorId, projectId) => {
+    setLabourWorkEntries((prev) =>
+      prev.filter(
+        (e) =>
+          !(
+            e.date === date &&
+            String(e.vendorId) === String(vendorId) &&
+            sameScopedProject(e.projectId, projectId)
+          )
+      )
+    );
+  }, []);
+
   /* -------------------- FETCH VENDORS -------------------- */
 
   const fetchVendors = async () => {
     try {
       const res = await getVendorsByType();
-      const data = res?.data?.data || [];
+      const raw = res?.data?.data ?? res?.data ?? [];
+      const data = Array.isArray(raw) ? raw : [];
 
       setVendors(
         data.map((v) => ({
           id: v.id,
           name: v.name || 'Vendor',
+          vendorType: String(v.vendor_type || v.type || v.category || '').trim(),
         }))
       );
     } catch (err) {
@@ -151,7 +197,8 @@ const deleteStockEntry = useCallback((id) => {
 }, []);
 
 const getStockByProject = useCallback((projectId) => {
-  return stockData.filter((s) => s.projectId === projectId);
+  if (projectId == null) return [];
+  return stockData.filter((s) => String(s.projectId) === String(projectId));
 }, [stockData]);
 /* -------------------- LEDGER -------------------- */
 
@@ -183,6 +230,19 @@ const addExpense = useCallback((projectId, expense) => {
 
   return newExpense; // ✅ VERY IMPORTANT
 }, [ledgerData]);
+
+  const setTotalAmount = useCallback((projectId, totalAmount) => {
+    const n = Number(totalAmount);
+    const amt = Number.isFinite(n) && n >= 0 ? n : 0;
+    setLedgerData((prev) => ({
+      ...prev,
+      [projectId]: {
+        totalAmount: amt,
+        expenses: prev[projectId]?.expenses || [],
+      },
+    }));
+  }, []);
+
   /* -------------------- CONTEXT VALUE -------------------- */
 
   const value = useMemo(() => ({
@@ -203,9 +263,29 @@ const addExpense = useCallback((projectId, expense) => {
   // LEDGER
   getLedger,
   addExpense,
+  setTotalAmount,
+
+  labourWorkEntries,
+  addLabourWorkEntry,
+  updateLabourWorkEntry,
+  removeLabourWorkEntriesForVendorDate,
 
   dateKey,
-}), [projects, vendors, materials, ledgerData, stockData]);
+}), [
+  projects,
+  vendors,
+  materials,
+  ledgerData,
+  stockData,
+  labourWorkEntries,
+  addLabourWorkEntry,
+  updateLabourWorkEntry,
+  removeLabourWorkEntriesForVendorDate,
+  addStockEntry,
+  deleteStockEntry,
+  getStockByProject,
+  setTotalAmount,
+]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

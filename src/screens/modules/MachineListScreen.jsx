@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View, Modal, Alert } from 'react-native';
 
 import { GradientButton } from '../../components/GradientButton';
@@ -7,10 +7,17 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
-import { getEquipmentEntries } from "../../api/machineApi";
-import { getMachines } from "../../api/machineApi";
-import { useFocusEffect } from '@react-navigation/native';
+import { deleteMachine, getEquipmentEntries, getMachines } from '../../api/machineApi';
 
+function listDateStr(d) {
+  if (!d) return '';
+  if (typeof d === 'string') return d.slice(0, 10);
+  try {
+    return new Date(d).toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+}
 
 export function MachineListScreen({ route, navigation }) {
   const { projectId } = route.params;
@@ -29,101 +36,88 @@ const [reason, setReason] = useState('');
 const [actionType, setActionType] = useState(null); // 'edit' | 'delete'
 const [selectedItem, setSelectedItem] = useState(null);
   const formatTime = (t) => t?.slice(0, 5);
-const fetchMachines = async () => {
-  console.log("FETCH CALLED 🔥"); // 👈 ADD THIS
 
-  try {
-    const res = await getEquipmentEntries({
-      project_id: projectId,
-      date: selectedDate,
-    });
-
-    console.log("FULL RESPONSE:", res.data);
-
-    const list =
-      res?.data?.data?.data ||
-      res?.data?.data ||
-      res?.data ||
-      [];
-
-    console.log("FINAL LIST:", list);
-
-    setMachines(Array.isArray(list) ? list : []);
-  } catch (err) {
-    console.log("Machine fetch error", err?.response?.data || err.message);
-  }
-};
-const fetchMachinery = async () => {
-  try {
-    const res = await getMachines();
-    setMachineryList(res.data.data || []);
-  } catch (err) {
-    console.log("Machinery fetch error", err);
-  }
-};
-
-useEffect(() => {
-  fetchMachinery();
-}, []);
-  // ✅ FETCH API
-  useEffect(() => {
-    fetchMachines();
-  }, [selectedDate]);
-
-  useFocusEffect(
-  React.useCallback(() => {
-    console.log("FOCUS TRIGGERED 🔁");
-    fetchMachines();
-  }, [selectedDate])
-);
-
-  
-
-  // ✅ FILTER DATA
-const rows = useMemo(() => {
-  if (!search.trim()) return machines;
-
-  const q = search.toLowerCase();
-  return machines.filter(
-    (m) =>
-      String(m.equipment_id || '').includes(q) ||
-      (m.work_done || '').toLowerCase().includes(q)
-  );
-}, [machines, search]);
-const getMachineName = (id) => {
-  const machine = machineryList.find((m) => m.id === id);
-  return machine?.name || `Equipment #${id}`;
-};
-const handleReasonSubmit = async () => {
-  if (!reason.trim()) {
-    Alert.alert("Required", "Please enter reason");
-    return;
-  }
-
-  setShowReasonModal(false);
-
-  if (actionType === 'edit') {
-    navigation.navigate('MachineForm', {
-      projectId,
-      entry: selectedItem,   // ✅ old data
-      reason: reason,        // ✅ pass reason
-    });
-  }
-
-  if (actionType === 'delete') {
+  const fetchMachinery = async () => {
     try {
-      // 👉 replace with your API
-      console.log("DELETE ID:", selectedItem.id, "Reason:", reason);
-
-      // Example:
-      // await deleteMachine(selectedItem.id, { reason });
-
-      fetchMachines(); // refresh list
+      const res = await getMachines();
+      setMachineryList(res.data.data || []);
     } catch (err) {
-      console.log("Delete error:", err);
+      console.log('Machinery fetch error', err);
     }
-  }
-};
+  };
+
+  useEffect(() => {
+    fetchMachinery();
+  }, []);
+
+  const loadMachines = useCallback(async () => {
+    try {
+      const dateStr = listDateStr(selectedDate);
+      const res = await getEquipmentEntries({
+        project_id: projectId,
+        date: dateStr,
+      });
+
+      const list =
+        res?.data?.data?.data ||
+        res?.data?.data ||
+        res?.data ||
+        [];
+
+      const raw = Array.isArray(list) ? list : [];
+      const scoped = raw.filter((m) => {
+        const pid = m.project_id ?? m.project?.id;
+        if (pid == null || pid === '') return true;
+        return String(pid) === String(projectId ?? '');
+      });
+      setMachines(scoped);
+    } catch (err) {
+      console.log('Machine fetch error', err?.response?.data || err.message);
+      setMachines([]);
+    }
+  }, [selectedDate, projectId]);
+
+  useEffect(() => {
+    loadMachines();
+    const sub = navigation.addListener('focus', () => {
+      loadMachines();
+    });
+    return sub;
+  }, [navigation, loadMachines]);
+
+  const getMachineName = useCallback((id) => {
+    const machine = machineryList.find((m) => Number(m.id) === Number(id));
+    return machine?.name || `Equipment #${id}`;
+  }, [machineryList]);
+
+  const rows = useMemo(() => {
+    if (!search.trim()) return machines;
+
+    const q = search.toLowerCase();
+    return machines.filter(
+      (m) =>
+        String(m.equipment_id || '').includes(q) ||
+        (m.work_done || '').toLowerCase().includes(q) ||
+        (getMachineName(m.equipment_id) || '').toLowerCase().includes(q)
+    );
+  }, [machines, search, getMachineName]);
+
+  const handleDeleteReasonSubmit = async () => {
+    if (!reason.trim()) {
+      Alert.alert('Required', 'Please enter reason');
+      return;
+    }
+    setShowReasonModal(false);
+    if (actionType !== 'delete' || !selectedItem?.id) return;
+    try {
+      await deleteMachine(selectedItem.id, { reason: reason.trim() });
+      loadMachines();
+    } catch (err) {
+      console.log('Delete error:', err);
+      Alert.alert('Error', 'Could not delete this entry.');
+    }
+  };
+
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <View style={styles.wrap}>
@@ -150,27 +144,35 @@ const handleReasonSubmit = async () => {
 
         {/* DATE + ADD */}
         <View style={styles.dateRow}>
-          <DatePickerField
-            label=""
-            value={selectedDate}
-            onChange={setSelectedDate}
-            style={styles.dateBtnWrap}
-          />
-          <GradientButton
-            title="Add Machine"
-            onPress={() =>
-              navigation.navigate('MachineForm', { projectId })
-            }
-            colors={['#2f86de', '#62b6ff']}
-            style={styles.addBtn}
-            left={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#fff" />}
-          />
+          <View style={styles.dateBtnWrap}>
+            <DatePickerField
+              label={null}
+              value={selectedDate}
+              onChange={setSelectedDate}
+              style={styles.dateFieldInner}
+            />
+          </View>
+          <View style={styles.addBtnWrap}>
+            <GradientButton
+              title="Add Machine"
+              onPress={() =>
+                navigation.navigate('MachineForm', {
+                  projectId,
+                  workDate: listDateStr(selectedDate),
+                })
+              }
+              colors={['#2f86de', '#62b6ff']}
+              left={<MaterialCommunityIcons name="plus-circle-outline" size={18} color="#fff" />}
+            />
+          </View>
         </View>
 
         {/* LIST */}
         <FlatList
           data={rows}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          keyExtractor={(item, index) =>
+            item?.id != null ? String(item.id) : `m-${index}`
+          }
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <Pressable
@@ -184,8 +186,8 @@ const handleReasonSubmit = async () => {
 
   <View style={styles.meta}>
     <Text style={styles.name}>
-  {item.equipment?.name || 'Machine'}
-</Text>
+      {item.equipment?.name || getMachineName(item.equipment_id)}
+    </Text>
 
     <Text style={styles.sub2}>
   {formatTime(item.start_time)} → {formatTime(item.end_time)} • {item.total_hours} hrs
@@ -204,12 +206,13 @@ const handleReasonSubmit = async () => {
 
   {/* EDIT */}
   <Pressable
-    onPress={() => {
-      setSelectedItem(item);
-      setActionType('edit');
-      setReason('');
-      setShowReasonModal(true);
-    }}
+    onPress={() =>
+      navigation.navigate('MachineForm', {
+        projectId,
+        entryId: item.id,
+        workDate: listDateStr(selectedDate),
+      })
+    }
   >
     <MaterialCommunityIcons name="pencil" size={20} color="#2563eb" />
   </Pressable>
@@ -245,7 +248,7 @@ const handleReasonSubmit = async () => {
     <Pressable style={{ flex: 1 }} onPress={() => setShowReasonModal(false)} />
 
     <View style={styles.bottomSheet}>
-      <Text style={styles.modalTitle}>Enter Reason</Text>
+      <Text style={styles.modalTitle}>Reason for delete</Text>
 
       <TextInput
         style={styles.reasonInput}
@@ -255,7 +258,7 @@ const handleReasonSubmit = async () => {
         multiline
       />
 
-      <Pressable style={styles.saveBtn} onPress={handleReasonSubmit}>
+      <Pressable style={styles.saveBtn} onPress={handleDeleteReasonSubmit}>
         <Text style={styles.saveText}>Continue</Text>
       </Pressable>
 
@@ -289,9 +292,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, color: colors.text, paddingVertical: 10 },
-  dateRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 8 },
-  dateBtnWrap: { flex: 1 },
-  addBtn: { flex: 1 },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  dateBtnWrap: { flex: 1, marginRight: 12, justifyContent: 'center' },
+  dateFieldInner: { marginBottom: 0 },
+  addBtnWrap: { flex: 1, justifyContent: 'center' },
   list: { padding: 16, paddingBottom: 120, gap: 12 },
   card: {
     backgroundColor: 'rgba(255,255,255,0.94)',

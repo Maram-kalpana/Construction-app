@@ -1,28 +1,91 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SegmentedButtons } from 'react-native-paper';
 
 import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/theme';
 
+function vendorsMatchingType(vendors, expenseType) {
+  const hay = (v) =>
+    `${String(v.vendorType || '').toLowerCase()} ${String(v.name || '').toLowerCase()}`;
+  const labourKeys = ['labour', 'labor', 'worker', 'contract', 'mistry', 'mason', 'helper'];
+  const materialKeys = [
+    'material',
+    'supplier',
+    'cement',
+    'sand',
+    'brick',
+    'steel',
+    'stone',
+    'aggregate',
+    'vendor',
+    'tile',
+    'paint',
+  ];
+  const machineryKeys = ['machinery', 'hire', 'equipment', 'plant', 'excav', 'crane', 'mixer', 'rental', 'vehicle'];
+
+  const keys =
+    expenseType === 'Labour'
+      ? labourKeys
+      : expenseType === 'Material'
+        ? materialKeys
+        : machineryKeys;
+
+  return (vendors || []).filter((v) => keys.some((k) => hay(v).includes(k)));
+}
+
 export function AddExpenseScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { user } = useAuth();
-  const { addExpense, projects } = useApp();
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
+  const { addExpense, projects, vendors } = useApp();
+  const project = useMemo(
+    () => projects.find((p) => String(p.id) === String(projectId)),
+    [projects, projectId],
+  );
 
-  const [name, setName] = useState('');
-  const [type, setType] = useState('Labour');
+  const [expenseType, setExpenseType] = useState('Labour');
+  const [partyId, setPartyId] = useState(null);
   const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
+
+  const partyList = useMemo(
+    () => vendorsMatchingType(vendors, expenseType),
+    [vendors, expenseType],
+  );
+
+  const partyOptions = useMemo(
+    () => [
+      { label: 'Select party', value: null },
+      ...partyList.map((v) => ({ label: v.name, value: v.id })),
+    ],
+    [partyList],
+  );
+
+  const onTypeChange = useCallback((v) => {
+    setExpenseType(v);
+    setPartyId(null);
+  }, []);
+
+  const partyLabel =
+    expenseType === 'Labour'
+      ? 'Party name (labour)'
+      : expenseType === 'Material'
+        ? 'Party name (material)'
+        : 'Party name (machinery hire)';
+
+  const selectedName = partyList.find((v) => v.id === partyId)?.name || '';
+
+  const disabled = useMemo(
+    () => partyId == null || Number(amount) <= 0 || !Number.isFinite(Number(amount)),
+    [partyId, amount],
+  );
 
   const dateLabel = useMemo(() => new Date().toLocaleString(), []);
-  const disabled = useMemo(() => name.trim().length < 2 || Number(amount) <= 0 || !Number.isFinite(Number(amount)), [name, amount]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -36,17 +99,10 @@ export function AddExpenseScreen({ route, navigation }) {
           </Text>
 
           <View style={styles.formCard}>
-            <AppTextField
-              label="Name / party name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter party name"
-            />
-
             <Text style={styles.label}>Type</Text>
             <SegmentedButtons
-              value={type}
-              onValueChange={setType}
+              value={expenseType}
+              onValueChange={onTypeChange}
               style={styles.segment}
               buttons={[
                 { value: 'Labour', label: 'Labour' },
@@ -62,6 +118,20 @@ export function AddExpenseScreen({ route, navigation }) {
               }}
             />
 
+            <SelectField
+              label={partyLabel}
+              value={partyId}
+              onChange={setPartyId}
+              placeholder={partyList.length ? 'Select party' : 'No matching parties'}
+              options={partyOptions}
+            />
+            {partyList.length === 0 ? (
+              <Text style={styles.hint}>
+                No vendors match this type yet. Add vendors whose category or name suggests {expenseType.toLowerCase()}{' '}
+                (e.g. “Labour contractor”, “Cement supplier”).
+              </Text>
+            ) : null}
+
             <AppTextField
               label="Amount"
               value={amount}
@@ -70,31 +140,21 @@ export function AddExpenseScreen({ route, navigation }) {
               placeholder="0"
             />
 
-            <AppTextField
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              placeholder="Optional notes"
-            />
-
             <GradientButton
               title="Save expense"
               disabled={disabled}
               onPress={async () => {
                 if (!user) return;
                 const exp = await addExpense(projectId, {
-  managerId: user.id,
-  name,
-  type,
-  amount: Number(amount),
-  description,
-  dateIso: new Date().toISOString(), // ✅ VERY IMPORTANT
-});
+                  managerId: user.id,
+                  name: selectedName,
+                  partyId,
+                  type: expenseType,
+                  amount: Number(amount),
+                  dateIso: new Date().toISOString(),
+                });
                 navigation.replace('ExpenseDetails', { projectId, expense: exp });
               }}
-              style={styles.btn}
             />
           </View>
         </ScrollView>
@@ -118,5 +178,11 @@ const styles = StyleSheet.create({
   },
   label: { color: colors.text, fontWeight: '800', marginBottom: 10, marginTop: 4 },
   segment: { marginBottom: 12 },
-  btn: { marginTop: 4 },
+  hint: {
+    marginTop: -4,
+    marginBottom: 12,
+    color: colors.mutedText,
+    fontSize: 12,
+    lineHeight: 17,
+  },
 });

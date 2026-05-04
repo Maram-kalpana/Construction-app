@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   FlatList,
   Image,
@@ -8,6 +9,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,11 +25,60 @@ import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 import { getLabours, addLabour, deleteLabour, updateLabour } from '../../api/labourApi';
 import { markAttendance, getTodayAttendance } from '../../api/attendanceApi';
-import { getProjects } from '../../api/projectApi';
+import {
+  labourBelongsToProject,
+  labourProjectIdFromRow,
+  attendanceBelongsToProject,
+} from '../../utils/labourProjectScope';
 
-export function LabourListScreen({ route, navigation }) {
+/** Vendor id/name from labour list API (flat vendor_id vs nested vendor object). */
+function labourVendorFromApi(item) {
+  const nested = item?.vendor;
+  const id =
+    item?.vendor_id ??
+    (nested && typeof nested === 'object' ? nested.id : null) ??
+    null;
+  const nameFromApi =
+    (nested && typeof nested === 'object' && nested.name) ||
+    item?.vendor_name ||
+    '';
+  return {
+    vendorId: id != null && id !== '' ? id : null,
+    vendorName: nameFromApi ? String(nameFromApi) : null,
+  };
+}
+
+function toDateOnlyStr(d) {
+  if (d == null || d === '') return '';
+  if (typeof d === 'string') return d.slice(0, 10);
+  try {
+    return new Date(d).toISOString().slice(0, 10);
+  } catch {
+    return '';
+  }
+}
+
+/** Laravel-style validation payload → single message for inline display. */
+function formatLabourApiErrors(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  if (typeof payload.errors === 'string') return payload.errors;
+  if (typeof payload.message === 'string' && !payload.errors) return payload.message;
+  if (payload.errors && typeof payload.errors === 'object' && !Array.isArray(payload.errors)) {
+    const parts = [];
+    for (const [key, val] of Object.entries(payload.errors)) {
+      const msgs = Array.isArray(val) ? val : [val];
+      msgs.forEach((m) => {
+        if (m != null && String(m).trim()) parts.push(`${key}: ${String(m).trim()}`);
+      });
+    }
+    return parts.length ? parts.join('\n') : '';
+  }
+  return '';
+}
+
+export function LabourListScreen({ route }) {
   const { projectId, vendorId: filterVendorId, date: routeDate } = route.params || {};
-  const { vendors, dateKey } = useApp();
+  const { vendors, dateKey, projects: appProjects } = useApp();
 
   const today = dateKey();
   const [search, setSearch] = useState('');
@@ -36,6 +87,7 @@ export function LabourListScreen({ route, navigation }) {
   const [age, setAge] = useState('');
   const [phone, setPhone] = useState('');
   const [dailyWage, setDailyWage] = useState('');
+  const [effectiveFrom, setEffectiveFrom] = useState(routeDate || today);
   const [gender, setGender] = useState('male');
   const [vendorId, setVendorId] = useState(null);
   const [photoUri, setPhotoUri] = useState(null);
@@ -45,80 +97,100 @@ export function LabourListScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const [editId, setEditId] = useState(null);
   const [attendanceMap, setAttendanceMap] = useState({});
-  const [projectIdState, setProjectIdState] = useState(projectId || null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [editReason, setEditReason] = useState('');
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedLabour, setSelectedLabour] = useState(null);
   const [actionType, setActionType] = useState(null);
   const [actionLabour, setActionLabour] = useState(null);
-  const [projects, setProjects] = useState([]);
+  const [formError, setFormError] = useState('');
+  const projectTitle =
+    (appProjects || []).find((p) => String(p.id) === String(projectId))?.name || 'Project';
 
-  useEffect(() => {
-    fetchLabours();
-    fetchAttendance();
-    fetchProjects();
-  }, []);
-
-  const fetchLabours = async () => {
+  const loadLaboursAndAttendance = async () => {
     try {
       setLoading(true);
-      const res = await getLabours();
-      const data = res?.data?.data || [];
-      const formatted = data.map((item) => ({
-        id: item.id,
-        name: item.full_name,
-        age: item.age,
-        gender: item.gender,
-        phone: item.phone,
-        vendorId: item.vendor_id,
-        photoUri: item.profile_pic,
-        dailyWage: item.daily_wage || 0,
-      }));
+      const params = projectId != null && projectId !== '' ? { project_id: projectId } : undefined;
+      const labourRes = await getLabours(params);
+      const raw = labourRes?.data?.data ?? labourRes?.data ?? [];
+      const data = Array.isArray(raw) ? raw : [];
+      const formatted = data
+        .map((item) => {
+          const { vendorId, vendorName } = labourVendorFromApi(item);
+          const fromRow = labourProjectIdFromRow(item);
+          const projectIdForRow =
+            fromRow != null && fromRow !== ''
+              ? fromRow
+              : projectId != null && projectId !== ''
+                ? projectId
+                : null;
+          return {
+            id: item.id,
+            name: item.full_name,
+            age: item.age,
+            gender: item.gender,
+            phone: item.phone,
+            vendorId,
+            vendorName,
+            photoUri: item.profile_pic,
+            dailyWage: item.daily_wage || 0,
+            effectiveFrom: item.effective_from || item.effective_from_date || null,
+            projectId: projectIdForRow,
+          };
+        })
+        .filter((row) => labourBelongsToProject(row, projectId));
+
       setLabours(formatted);
+
+      const dateStr =
+        typeof selectedDate === 'string'
+          ? selectedDate
+          : new Date(selectedDate).toISOString().split('T')[0];
+      const attRes = await getTodayAttendance({
+        date: dateStr,
+        ...(params || {}),
+      });
+      const attRaw = attRes?.data?.data ?? attRes?.data ?? [];
+      const attData = Array.isArray(attRaw) ? attRaw : [];
+      const allowedIds = new Set(formatted.map((l) => Number(l.id)));
+      const map = {};
+      attData.forEach((item) => {
+        if (!attendanceBelongsToProject(item, projectId)) return;
+        if (!allowedIds.has(Number(item.labour_id))) return;
+        map[item.labour_id] = item.is_present == 1;
+      });
+      setAttendanceMap(map);
     } catch (err) {
-      console.log('Labour fetch error:', err.response?.data || err.message);
+      console.log('Labour/attendance fetch error:', err.response?.data || err.message);
+      setLabours([]);
+      setAttendanceMap({});
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAttendance = async () => {
-    try {
-      const res = await getTodayAttendance();
-      const data = res?.data?.data || [];
-      const map = {};
-      data.forEach((item) => {
-        map[item.labour_id] = item.is_present == 1;
-      });
-      setAttendanceMap(map);
-    } catch (err) {
-      console.log('Attendance fetch error:', err.response?.data || err.message);
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const res = await getProjects();
-      const data = res?.data?.data || [];
-      const formatted = data.map((p) => ({ id: p.id, name: p.name }));
-      setProjects(formatted);
-    } catch (err) {
-      console.log('Project fetch error:', err.response?.data || err.message);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadLaboursAndAttendance();
+    }, [selectedDate, projectId])
+  );
 
   const filtered = useMemo(() => {
+    const vendorIdMatch = (p) =>
+      !filterVendorId || Number(p.vendorId) === Number(filterVendorId);
+
     if (!search.trim()) {
-      return labours.filter((p) => !filterVendorId || p.vendorId === filterVendorId);
+      return labours.filter(vendorIdMatch);
     }
     const q = search.toLowerCase();
     return labours.filter((p) => {
+      const ctxVendorName = vendors.find((v) => Number(v.id) === Number(p.vendorId))?.name || '';
       const searchHit =
         p.name?.toLowerCase().includes(q) ||
         p.phone?.includes(q) ||
-        (vendors.find((v) => v.id === p.vendorId)?.name || '').toLowerCase().includes(q);
-      return (!filterVendorId || p.vendorId === filterVendorId) && searchHit;
+        (p.vendorName || '').toLowerCase().includes(q) ||
+        ctxVendorName.toLowerCase().includes(q);
+      return vendorIdMatch(p) && searchHit;
     });
   }, [filterVendorId, labours, search, vendors]);
 
@@ -157,9 +229,14 @@ export function LabourListScreen({ route, navigation }) {
     setName(item.name || '');
     setAge(String(item.age || ''));
     setPhone(item.phone || '');
+    setDailyWage(item.dailyWage != null && item.dailyWage !== '' ? String(item.dailyWage) : '');
+    setEffectiveFrom(
+      toDateOnlyStr(item.effectiveFrom) || toDateOnlyStr(selectedDate) || today,
+    );
     setGender(item.gender || 'male');
     setVendorId(Number(item.vendorId) || null);
     setPhotoUri(item.photoUri || null);
+    setFormError('');
     setShowAddModal(true);
   };
 
@@ -172,7 +249,7 @@ export function LabourListScreen({ route, navigation }) {
         onPress: async () => {
           try {
             await deleteLabour(id);
-            fetchLabours();
+            loadLaboursAndAttendance();
           } catch (err) {
             console.log('Delete error:', err.response?.data);
           }
@@ -186,9 +263,12 @@ export function LabourListScreen({ route, navigation }) {
     setName('');
     setAge('');
     setPhone('');
+    setDailyWage('');
+    setEffectiveFrom(today);
     setGender('male');
     setVendorId(null);
     setPhotoUri(null);
+    setFormError('');
     setShowAddModal(false);
   };
 
@@ -206,7 +286,9 @@ export function LabourListScreen({ route, navigation }) {
         {/* Vendor */}
         <View style={[styles.cell, styles.colVendor]}>
           <Text style={styles.cellText}>
-            {vendors.find((v) => Number(v.id) === Number(item.vendorId))?.name}
+            {item.vendorName ||
+              vendors.find((v) => Number(v.id) === Number(item.vendorId))?.name ||
+              '—'}
           </Text>
         </View>
 
@@ -227,6 +309,7 @@ export function LabourListScreen({ route, navigation }) {
                   labour_ids: [item.id],
                   date: selectedDate,
                   is_present: newStatus ? 1 : 0,
+                  ...(projectId != null && projectId !== '' ? { project_id: projectId } : {}),
                 });
                 setAttendanceMap((prev) => ({ ...prev, [item.id]: newStatus }));
               } catch (err) {
@@ -261,17 +344,24 @@ export function LabourListScreen({ route, navigation }) {
     <ScreenContainer edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
         <FlatList
+          style={styles.listFlex}
           data={filtered}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmptyGrow]}
           ListHeaderComponent={(
             <>
               {/* HEADER */}
               <View style={styles.header}>
                 <Text style={styles.h1}>Labour Details</Text>
                 <Text style={styles.sub}>Tap checkbox to mark attendance for selected date.</Text>
+                {!!projectId && (
+                  <View style={styles.listProjectPill}>
+                    <MaterialCommunityIcons name="office-building-outline" size={14} color="#1d78d8" />
+                    <Text style={styles.listProjectPillText}>{projectTitle}</Text>
+                  </View>
+                )}
               </View>
 
               {/* DATE + SEARCH */}
@@ -309,7 +399,14 @@ export function LabourListScreen({ route, navigation }) {
                       Present: {presentCount} / {labours.length}
                     </Text>
                   </View>
-                  <Pressable style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+                  <Pressable
+                    style={styles.addBtn}
+                    onPress={() => {
+                      setFormError('');
+                      setEffectiveFrom(toDateOnlyStr(selectedDate) || today);
+                      setShowAddModal(true);
+                    }}
+                  >
                     <MaterialCommunityIcons name="plus" size={16} color="#fff" />
                     <Text style={styles.addBtnText}>Add Labour</Text>
                   </Pressable>
@@ -340,8 +437,24 @@ export function LabourListScreen({ route, navigation }) {
       <Modal visible={showAddModal} transparent animationType="slide" onRequestClose={resetModal}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add Labour</Text>
+            <Text style={styles.modalTitle}>{editId ? 'Edit labour' : 'Add labour'}</Text>
+            <View style={styles.modalProjectPill}>
+              <MaterialCommunityIcons name="office-building-outline" size={14} color="#1d78d8" />
+              <Text style={styles.modalProjectPillText}>{projectTitle}</Text>
+            </View>
 
+            {!!formError && (
+              <View style={styles.formErrorBanner}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#b91c1c" />
+                <Text style={styles.formErrorText}>{formError}</Text>
+              </View>
+            )}
+
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              style={styles.modalScroll}
+            >
             {/* Photo + Name */}
             <View style={styles.photoNameRow}>
               <Pressable style={styles.photoCircle} onPress={() => setShowPhotoModal(true)}>
@@ -355,7 +468,15 @@ export function LabourListScreen({ route, navigation }) {
                 )}
               </Pressable>
               <View style={{ flex: 1 }}>
-                <AppTextField label="Full Name" value={name} onChangeText={setName} placeholder="Enter full name" />
+                <AppTextField
+                  label="Full Name"
+                  value={name}
+                  onChangeText={(t) => {
+                    setFormError('');
+                    setName(t);
+                  }}
+                  placeholder="Enter full name"
+                />
               </View>
             </View>
 
@@ -365,7 +486,10 @@ export function LabourListScreen({ route, navigation }) {
                 style={styles.halfLeft}
                 label="Phone Number"
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(t) => {
+                  setFormError('');
+                  setPhone(t);
+                }}
                 keyboardType="phone-pad"
                 placeholder="Phone number"
               />
@@ -373,7 +497,10 @@ export function LabourListScreen({ route, navigation }) {
                 style={styles.halfRight}
                 label="Daily Wages"
                 value={dailyWage}
-                onChangeText={setDailyWage}
+                onChangeText={(t) => {
+                  setFormError('');
+                  setDailyWage(t);
+                }}
                 keyboardType="numeric"
                 placeholder="₹ Amount"
               />
@@ -385,7 +512,10 @@ export function LabourListScreen({ route, navigation }) {
                 style={styles.thirdLeft}
                 label="Age"
                 value={age}
-                onChangeText={setAge}
+                onChangeText={(t) => {
+                  setFormError('');
+                  setAge(t);
+                }}
                 keyboardType="numeric"
                 placeholder="Age"
               />
@@ -393,7 +523,10 @@ export function LabourListScreen({ route, navigation }) {
                 style={styles.thirdMid}
                 label="Gender"
                 value={gender}
-                onChange={setGender}
+                onChange={(v) => {
+                  setFormError('');
+                  setGender(v);
+                }}
                 options={[
                   { label: 'Male', value: 'male' },
                   { label: 'Female', value: 'female' },
@@ -402,43 +535,54 @@ export function LabourListScreen({ route, navigation }) {
               />
               <DatePickerField
                 style={styles.thirdRight}
-                label="Date"
-                value={selectedDate}
-                onChange={setSelectedDate}
+                label="Effective from"
+                value={effectiveFrom}
+                onChange={(v) => {
+                  setFormError('');
+                  setEffectiveFrom(v);
+                }}
               />
             </View>
 
-            {/* Vendor + Project */}
-            <View style={styles.grid2}>
-              <SelectField
-                style={styles.halfLeft}
-                label="Vendor"
-                value={vendorId}
-                onChange={setVendorId}
-                placeholder="Select vendor"
-                options={[
-                  { label: 'Select vendor', value: null },
-                  ...vendors.map((v) => ({ label: v.name, value: v.id })),
-                ]}
-              />
-              <SelectField
-                style={styles.halfRight}
-                label="Project"
-                value={projectIdState}
-                onChange={setProjectIdState}
-                placeholder="Select project"
-                options={[
-                  { label: 'Select project', value: null },
-                  ...(projects || []).map((p) => ({ label: p.name, value: p.id })),
-                ]}
-              />
-            </View>
+            <SelectField
+              label="Vendor"
+              value={vendorId}
+              onChange={(v) => {
+                setFormError('');
+                setVendorId(v);
+              }}
+              placeholder="Select vendor"
+              options={[
+                { label: 'Select vendor', value: null },
+                ...vendors.map((v) => ({ label: v.name, value: v.id })),
+              ]}
+            />
+
+            </ScrollView>
 
             {/* Save */}
             <Pressable
               style={styles.saveBtn}
               onPress={async () => {
-                if (!name.trim() || !phone.trim()) return;
+                setFormError('');
+                if (!name.trim()) {
+                  setFormError('Full name is required.');
+                  return;
+                }
+                if (!phone.trim()) {
+                  setFormError('Phone number is required.');
+                  return;
+                }
+                const wageNum = Number(String(dailyWage).trim());
+                if (!String(dailyWage).trim() || !Number.isFinite(wageNum) || wageNum < 0) {
+                  setFormError('Enter a valid daily wage (0 or more).');
+                  return;
+                }
+                const eff = toDateOnlyStr(effectiveFrom);
+                if (!eff) {
+                  setFormError('Select the wage effective from date.');
+                  return;
+                }
                 try {
                   if (editId) {
                     await updateLabour(editId, {
@@ -446,9 +590,12 @@ export function LabourListScreen({ route, navigation }) {
                       age: Number(age),
                       gender,
                       phone,
+                      daily_wage: wageNum,
+                      effective_from: eff,
                       vendor_id: vendorId,
                       profile_pic: photoUri,
                       edit_reason: editReason,
+                      ...(projectId != null && projectId !== '' ? { project_id: projectId } : {}),
                     });
                   } else {
                     await addLabour({
@@ -456,15 +603,21 @@ export function LabourListScreen({ route, navigation }) {
                       age: Number(age),
                       gender,
                       phone,
+                      daily_wage: wageNum,
+                      effective_from: eff,
                       vendor_id: vendorId,
-                      project_id: projectIdState,
+                      ...(projectId != null && projectId !== '' ? { project_id: projectId } : {}),
                     });
                   }
                   setEditId(null);
-                  await fetchLabours();
+                  setFormError('');
+                  await loadLaboursAndAttendance();
                   resetModal();
                 } catch (err) {
-                  console.log('Save error:', err.response?.data || err.message);
+                  const body = err?.response?.data;
+                  const msg = formatLabourApiErrors(body) || err?.message || 'Could not save. Please try again.';
+                  setFormError(msg);
+                  console.log('Save error:', body || err.message);
                 }
               }}
             >
@@ -515,7 +668,9 @@ export function LabourListScreen({ route, navigation }) {
                 <View style={styles.viewField}>
                   <Text style={styles.viewLabel}>Vendor</Text>
                   <Text style={styles.viewValue}>
-                    {vendors.find((v) => Number(v.id) === Number(selectedLabour.vendorId))?.name || '-'}
+                    {selectedLabour.vendorName ||
+                      vendors.find((v) => Number(v.id) === Number(selectedLabour.vendorId))?.name ||
+                      '—'}
                   </Text>
                 </View>
                 <View style={styles.viewField}>
@@ -647,7 +802,7 @@ export function LabourListScreen({ route, navigation }) {
                 if (actionType === 'delete') {
                   try {
                     await deleteLabour(actionLabour.id);
-                    fetchLabours();
+                    loadLaboursAndAttendance();
                   } catch (err) {
                     console.log('Delete error:', err.response?.data);
                   }
@@ -668,11 +823,27 @@ export function LabourListScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
+  listFlex: { flex: 1 },
+  listEmptyGrow: { flexGrow: 1 },
 
   // page header
   header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 },
   h1: { fontSize: 22, fontWeight: '900', color: '#1a2f4e' },
   sub: { marginTop: 3, color: colors.mutedText, fontSize: 12 },
+  listProjectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(45,127,218,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(45,127,218,0.22)',
+  },
+  listProjectPillText: { color: '#1d78d8', fontWeight: '800', fontSize: 12 },
 
   // control row: date + search
   controlRow: {
@@ -815,7 +986,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.outline,
   },
-  modalTitle: { color: colors.text, fontSize: 22, fontWeight: '900', marginBottom: 14 },
+  modalTitle: { color: colors.text, fontSize: 22, fontWeight: '900', marginBottom: 8 },
+  modalProjectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(45,127,218,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(45,127,218,0.22)',
+    marginBottom: 14,
+  },
+  modalProjectPillText: { color: '#1d78d8', fontWeight: '800', fontSize: 12 },
+  formErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  formErrorText: {
+    flex: 1,
+    color: '#991b1b',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+  },
+  modalScroll: { maxHeight: Platform.OS === 'web' ? 520 : 440 },
 
   // photo + name row
   photoNameRow: {

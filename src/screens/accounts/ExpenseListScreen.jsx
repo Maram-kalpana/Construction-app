@@ -32,40 +32,35 @@ export function ExpenseListScreen({ route, navigation }) {
         </View>
 
         <FlatList
+          style={styles.listFlex}
           data={ledger.expenses || []}
-          keyExtractor={(e) => e.id}
+          keyExtractor={(e) => String(e.id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
-  if (!item) return null; // 🔥 prevent crash
+            if (!item) return null;
+            return (
+              <Pressable
+                onPress={() => navigation.navigate('ExpenseDetails', { projectId, expense: item })}
+                style={styles.card}
+              >
+                <View style={styles.row}>
+                  <View style={styles.iconWrap}>
+                    <MaterialCommunityIcons name="receipt" size={20} color="#fff" />
+                  </View>
 
-  return (
-    <Pressable
-      onPress={() => navigation.navigate('ExpenseDetails', { projectId, expense: item })}
-      style={styles.card}
-    >
-      <View style={styles.row}>
-        <View style={styles.iconWrap}>
-          <MaterialCommunityIcons name="receipt" size={20} color="#fff" />
-        </View>
+                  <View style={styles.meta}>
+                    <Text style={styles.name}>{item?.name || 'No name'}</Text>
+                    <Text style={styles.sub2}>
+                      {item?.type || '—'} •{' '}
+                      {item?.dateIso ? new Date(item.dateIso).toLocaleDateString() : 'No date'}
+                    </Text>
+                  </View>
 
-        <View style={styles.meta}>
-          <Text style={styles.name}>{item?.name || 'No name'}</Text>
-
-          <Text style={styles.sub2}>
-            {item?.type || '—'} •{" "}
-            {item?.dateIso
-              ? new Date(item.dateIso).toLocaleDateString()
-              : 'No date'}
-          </Text>
-        </View>
-
-        <Text style={styles.amount}>
-          {formatINR(item?.amount || 0)}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}}
+                  <Text style={styles.amount}>{formatINR(item?.amount || 0)}</Text>
+                </View>
+              </Pressable>
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.empty}>
               <MaterialCommunityIcons name="cash-remove" size={32} color="rgba(233,242,242,0.7)" />
@@ -81,10 +76,17 @@ export function ExpenseListScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 16, paddingBottom: 4 },
+  listFlex: { flex: 1 },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148,163,184,0.25)',
+  },
   h1: { color: colors.text, fontSize: 24, fontWeight: '900' },
-  sub: { marginTop: 6, color: colors.mutedText },
-  list: { padding: 16, paddingBottom: 28, gap: 12 },
+  sub: { marginTop: 6, color: colors.mutedText, fontSize: 13 },
+  list: { padding: 16, paddingBottom: 28, gap: 12, flexGrow: 1 },
   card: {
   backgroundColor: '#ffffff', // ✅ white card
   borderRadius: 16,

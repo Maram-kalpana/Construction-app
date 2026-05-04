@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTextField } from '../../components/AppTextField';
@@ -20,13 +20,20 @@ function formatINR(value) {
 export function AccountsDashboardScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { getLedger, setTotalAmount, projects } = useApp();
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
+  const project = useMemo(
+    () => projects.find((p) => String(p.id) === String(projectId)),
+    [projects, projectId],
+  );
 
   const ledger = getLedger(projectId);
   const totalExpenses = useMemo(() => ledger.expenses.reduce((sum, e) => sum + e.amount, 0), [ledger.expenses]);
   const balance = ledger.totalAmount - totalExpenses;
 
   const [draftTotal, setDraftTotal] = useState(String(ledger.totalAmount));
+
+  useEffect(() => {
+    setDraftTotal(String(ledger.totalAmount ?? 0));
+  }, [projectId, ledger.totalAmount]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -35,28 +42,28 @@ export function AccountsDashboardScreen({ route, navigation }) {
         <Text style={styles.sub}>{project ? `${project.name} • ${project.location}` : `Project ${projectId}`}</Text>
 
         <View style={styles.grid}>
-          <GradientCard colors={['#2f86de', '#62b6ff']} style={styles.card}>
+          <GradientCard colors={['#ffffff', '#ffffff']} style={[styles.card, styles.cardSurface]}>
             <View style={styles.cardTop}>
-              <MaterialCommunityIcons name="cash-plus" size={22} color="#fff" />
+              <MaterialCommunityIcons name="cash-plus" size={22} color={colors.buttonStart} />
               <Text style={styles.cardLabel}>Total amount</Text>
             </View>
             <Text style={styles.cardValue}>{formatINR(ledger.totalAmount)}</Text>
           </GradientCard>
 
-          <GradientCard colors={['#2f86de', '#62b6ff']} style={styles.card}>
+          <GradientCard colors={['#ffffff', '#ffffff']} style={[styles.card, styles.cardSurface]}>
             <View style={styles.cardTop}>
-              <MaterialCommunityIcons name="cash-minus" size={22} color="#fff" />
+              <MaterialCommunityIcons name="cash-minus" size={22} color={colors.buttonStart} />
               <Text style={styles.cardLabel}>Expenses</Text>
             </View>
             <Text style={styles.cardValue}>{formatINR(totalExpenses)}</Text>
           </GradientCard>
 
-          <GradientCard colors={['#2f86de', '#62b6ff']} style={styles.cardWide}>
+          <GradientCard colors={['#ffffff', '#ffffff']} style={[styles.cardWide, styles.cardSurface]}>
             <View style={styles.cardTop}>
-              <MaterialCommunityIcons name="wallet" size={22} color="#fff" />
+              <MaterialCommunityIcons name="wallet" size={22} color={colors.buttonStart} />
               <Text style={styles.cardLabel}>Balance</Text>
             </View>
-            <Text style={styles.cardValue}>{formatINR(balance)}</Text>
+            <Text style={[styles.cardValue, balance < 0 && styles.cardValueWarn]}>{formatINR(balance)}</Text>
           </GradientCard>
         </View>
 
@@ -73,18 +80,20 @@ export function AccountsDashboardScreen({ route, navigation }) {
 />
         </View>
 
-        {/* <View style={styles.totalEditor}>
-          <Text style={styles.sectionTitle}>Total amount received</Text>
-          <Text style={styles.sectionSub}>Update when funds are released for this project.</Text>
+        <View style={styles.totalEditor}>
+          <Text style={styles.sectionTitle}>Allocated budget</Text>
+          <Text style={styles.sectionSub}>
+            Amount released for this project (set by admin). This updates the Total amount card above.
+          </Text>
           <AppTextField
-            label="Total amount"
+            label="Total amount (allocated)"
             value={draftTotal}
             onChangeText={setDraftTotal}
             keyboardType="numeric"
             placeholder="0"
           />
           <GradientButton
-            title="Save total amount"
+            title="Save allocated total"
             onPress={() => {
               const next = Number(draftTotal);
               if (!Number.isFinite(next) || next < 0) return;
@@ -92,7 +101,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
             }}
             colors={['#2f86de', '#62b6ff']}
           />
-        </View> */}
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -105,9 +114,15 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: { width: '48%' },
   cardWide: { width: '100%' },
+  cardSurface: {
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.35)',
+    backgroundColor: colors.surface,
+  },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardLabel: { color: 'rgba(255,255,255,0.92)', fontSize: 13, fontWeight: '800' },
-  cardValue: { marginTop: 10, color: '#fff', fontSize: 24, fontWeight: '900' },
+  cardLabel: { color: colors.mutedText, fontSize: 13, fontWeight: '800' },
+  cardValue: { marginTop: 10, color: colors.text, fontSize: 24, fontWeight: '900' },
+  cardValueWarn: { color: '#b45309' },
   actions: { marginTop: 14, gap: 12 },
   totalEditor: {
     marginTop: 18,

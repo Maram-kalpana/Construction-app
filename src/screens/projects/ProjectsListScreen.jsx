@@ -62,11 +62,7 @@ export function ProjectsListScreen({ navigation }) {
                   <Text style={styles.sub}>{item.location}</Text>
                 </View>
 
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>
-                    {item.status === 0 ? "Active" : "Completed"}
-                  </Text>
-                </View>
+                <MaterialCommunityIcons name="chevron-right" size={22} color={colors.mutedText} />
               </View>
             </Pressable>
           )}
@@ -99,13 +95,4 @@ const styles = StyleSheet.create({
   meta: { flex: 1 },
   name: { color: colors.text, fontSize: 16, fontWeight: '800' },
   sub: { marginTop: 2, color: colors.mutedText, fontSize: 13 },
-  statusPill: {
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(76,193,123,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(35,138,74,0.22)',
-  },
-  statusText: { color: colors.text, fontWeight: '700', fontSize: 12 },
 });

@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,46 +11,98 @@ import {
   View,
   TouchableOpacity,
   Pressable,
+  Modal,
+  Alert,
+  TouchableWithoutFeedback,
 } from 'react-native';
 
+import { AppTextField } from '../../components/AppTextField';
 import { DatePickerField } from '../../components/DatePickerField';
-import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
 import { getLabours } from '../../api/labourApi';
 import { getTodayAttendance } from '../../api/attendanceApi';
-import { createReport } from '../../api/reportApi';
+import {
+  labourBelongsToProject,
+  labourRowWithInferredProject,
+  attendanceBelongsToProject,
+  sameScopedProject,
+} from '../../utils/labourProjectScope';
+
+function labourNamesForWorkLine(line, laboursList) {
+  if (line?.labourNames && String(line.labourNames).trim()) return String(line.labourNames).trim();
+  const ids = line?.labourIds;
+  if (!ids?.length) return '';
+  const map = new Map(
+    (laboursList || []).map((l) => [Number(l.id), l.full_name || l.name || ''])
+  );
+  return ids
+    .map((id) => map.get(Number(id)))
+    .filter(Boolean)
+    .join(', ');
+}
 
 export function LabourReportFormScreen({ route, navigation }) {
   const { projectId } = route.params || {};
-  const { vendors, dateKey } = useApp();
+  const { vendors, projects, dateKey, labourWorkEntries, removeLabourWorkEntriesForVendorDate } =
+    useApp();
+  const projectTitle =
+    (projects || []).find((p) => String(p.id) === String(projectId))?.name || 'Project';
   const today = dateKey();
   const [selectedDate, setSelectedDate] = useState(today);
   const [search, setSearch] = useState('');
   const [labours, setLabours] = useState([]);
   const [attendance, setAttendance] = useState([]);
 
-  useEffect(() => {
-    fetchData();
-  }, [selectedDate]);
+  const [deleteReasonModal, setDeleteReasonModal] = useState(false);
+  const [deleteTargetVendor, setDeleteTargetVendor] = useState(null);
+  const [deleteReasonInput, setDeleteReasonInput] = useState('');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const labourRes = await getLabours();
-      const attendanceRes = await getTodayAttendance();
-      const laboursData = labourRes?.data?.data || [];
-      const attendanceData = attendanceRes?.data?.data || [];
+      const dateStr =
+        typeof selectedDate === 'string'
+          ? selectedDate
+          : new Date(selectedDate).toISOString().split('T')[0];
+      const q = projectId != null && projectId !== '' ? { project_id: projectId } : undefined;
+      const labourRes = await getLabours(q);
+      const rawList = labourRes?.data?.data ?? labourRes?.data ?? [];
+      const rawLabours = Array.isArray(rawList) ? rawList : [];
+      const laboursData = rawLabours
+        .map((item) => labourRowWithInferredProject(item, projectId))
+        .filter((item) => labourBelongsToProject(item, projectId));
+      const attendanceRes = await getTodayAttendance({ date: dateStr, ...(q || {}) });
+      const attList = attendanceRes?.data?.data ?? attendanceRes?.data ?? [];
+      const attendanceData = Array.isArray(attList) ? attList : [];
+      const allowedIds = new Set(laboursData.map((l) => Number(l.id)));
+      const attendanceScoped = attendanceData.filter(
+        (a) =>
+          attendanceBelongsToProject(a, projectId) && allowedIds.has(Number(a?.labour_id)),
+      );
       setLabours(laboursData);
-      setAttendance(attendanceData);
+      setAttendance(attendanceScoped);
     } catch (err) {
       console.log('Report fetch error:', err.response?.data || err.message);
+      setLabours([]);
+      setAttendance([]);
     }
-  };
+  }, [selectedDate, projectId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   const vendorsWithRows = useMemo(() => {
     const presentLabourIds = (attendance || [])
-      .filter((a) => a?.is_present == 1)
+      .filter((a) => {
+        if (a?.is_present != 1) return false;
+        const d = a?.date || a?.attendance_date || a?.day || a?.marked_date;
+        if (!d) return true;
+        return String(d).slice(0, 10) === selectedDate;
+      })
       .map((a) => Number(a?.labour_id));
 
     const presentLabours = (labours || []).filter((l) =>
@@ -58,7 +111,8 @@ export function LabourReportFormScreen({ route, navigation }) {
 
     const map = {};
     presentLabours.forEach((p) => {
-      const key = p.vendor_id || 'no_vendor';
+      const vid = p.vendor_id ?? p.vendor?.id;
+      const key = vid != null && vid !== '' ? vid : 'no_vendor';
       if (!map[key]) map[key] = [];
       map[key].push(p);
     });
@@ -69,34 +123,61 @@ export function LabourReportFormScreen({ route, navigation }) {
       vendorName:
         vendorId === 'no_vendor'
           ? 'No Vendor'
-          : vendors.find((v) => v.id == vendorId)?.name || 'Vendor',
+          : vendors.find((v) => v.id == vendorId)?.name ||
+            persons[0]?.vendor?.name ||
+            'Vendor',
       persons,
     }));
-  }, [labours, attendance, vendors]);
+  }, [labours, attendance, vendors, selectedDate]);
 
   const totalPresent = vendorsWithRows.reduce((sum, v) => sum + v.persons.length, 0);
 
-  const handleSaveReport = async () => {
-    try {
-      for (const v of vendorsWithRows) {
-        const mason = v.persons.filter((p) => p.gender === 'male').length;
-        const female_unskilled = v.persons.filter((p) => p.gender !== 'male').length;
-        const payload = {
-          vendor_id: Number(v.id),
-          mason,
-          male_skilled: 0,
-          female_unskilled,
-          others: 0,
-          work_done: 'Work done',
-          date: selectedDate,
-        };
-        await createReport(payload);
-      }
-      console.log('Report saved successfully');
-      navigation.goBack();
-    } catch (err) {
-      console.log('Report save error:', err.response?.data || err.message);
+  const workLinesForVendor = (vendorId) =>
+    (labourWorkEntries || []).filter(
+      (e) =>
+        sameScopedProject(e.projectId, projectId) &&
+        e.date === selectedDate &&
+        String(e.vendorId) === String(vendorId),
+    );
+
+  const goPartyEdit = (vendorRow, entryId) => {
+    navigation.navigate('LabourReportPartyEdit', {
+      projectId,
+      vendorId: vendorRow.id,
+      vendorName: vendorRow.vendorName,
+      date: selectedDate,
+      mode: 'edit',
+      entryId: entryId || undefined,
+    });
+  };
+
+  const onCardEditPress = (vendorRow) => {
+    const lines = workLinesForVendor(vendorRow.id);
+    if (!lines.length) {
+      Alert.alert('No work saved', 'Add work from View first, then you can edit a work entry.');
+      return;
     }
+    const last = lines[lines.length - 1];
+    goPartyEdit(vendorRow, last.id);
+  };
+
+  const openDeleteReasonModal = (vendorRow) => {
+    setDeleteTargetVendor(vendorRow);
+    setDeleteReasonInput('');
+    setDeleteReasonModal(true);
+  };
+
+  const confirmDeleteWithReason = () => {
+    if (!deleteReasonInput.trim()) {
+      Alert.alert('Required', 'Please enter a reason for deletion.');
+      return;
+    }
+    if (!deleteTargetVendor) return;
+    removeLabourWorkEntriesForVendorDate(selectedDate, deleteTargetVendor.id, projectId);
+    setDeleteReasonModal(false);
+    setDeleteTargetVendor(null);
+    setDeleteReasonInput('');
+    Alert.alert('Deleted', 'Work log entries for this party on this date were removed.');
   };
 
   return (
@@ -113,6 +194,12 @@ export function LabourReportFormScreen({ route, navigation }) {
           {/* TITLE */}
           <Text style={styles.h1}>Daily Labour Report</Text>
           <Text style={styles.sub}>Date-wise entries and attended labour list</Text>
+          {!!projectId && (
+            <View style={styles.projectPill}>
+              <MaterialCommunityIcons name="office-building-outline" size={14} color="#1d78d8" />
+              <Text style={styles.projectPillText}>{projectTitle}</Text>
+            </View>
+          )}
 
           {/* Search + Date */}
           <View style={styles.controlRow}>
@@ -171,19 +258,9 @@ export function LabourReportFormScreen({ route, navigation }) {
               const male = v.persons.filter((p) => p.gender === 'male').length;
               const female = v.persons.filter((p) => p.gender !== 'male').length;
               const total = v.persons.length;
+              const workLines = workLinesForVendor(v.id);
               return (
-                <TouchableOpacity
-                  key={v.id}
-                  style={styles.vendorCard}
-                  activeOpacity={0.82}
-                  onPress={() =>
-                    navigation.navigate('LabourList', {
-                      projectId,
-                      vendorId: v.id,
-                      date: selectedDate,
-                    })
-                  }
-                >
+                <View key={v.id} style={styles.vendorCard}>
                   {/* Card header */}
                   <View style={styles.vendorHeader}>
                     <View style={styles.vendorIndex}>
@@ -192,9 +269,30 @@ export function LabourReportFormScreen({ route, navigation }) {
                     <Text style={styles.vendorName} numberOfLines={1}>
                       {v.vendorName}
                     </Text>
-                    <View style={styles.editChip}>
-                      <MaterialCommunityIcons name="pencil-outline" size={14} color="#2563eb" />
-                      <Text style={styles.editChipText}>Edit</Text>
+                    <View style={styles.cardActionsRow}>
+                      <Pressable
+                        style={styles.iconChip}
+                        onPress={() =>
+                          navigation.navigate('LabourReportPartyEdit', {
+                            projectId,
+                            vendorId: v.id,
+                            vendorName: v.vendorName,
+                            date: selectedDate,
+                            mode: 'view',
+                          })
+                        }
+                      >
+                        <MaterialCommunityIcons name="eye-outline" size={18} color="#2563eb" />
+                      </Pressable>
+                      <Pressable style={styles.iconChip} onPress={() => onCardEditPress(v)}>
+                        <MaterialCommunityIcons name="pencil-outline" size={18} color="#2563eb" />
+                      </Pressable>
+                      <Pressable
+                        style={[styles.iconChip, styles.iconChipDanger]}
+                        onPress={() => openDeleteReasonModal(v)}
+                      >
+                        <MaterialCommunityIcons name="delete-outline" size={18} color="#dc2626" />
+                      </Pressable>
                     </View>
                   </View>
 
@@ -202,11 +300,11 @@ export function LabourReportFormScreen({ route, navigation }) {
                   <View style={styles.statsRow}>
                     <View style={[styles.statBox, styles.statMale]}>
                       <Text style={styles.statNum}>{male}</Text>
-                      <Text style={styles.statLabel}>Mason</Text>
+                      <Text style={styles.statLabel}>Male</Text>
                     </View>
                     <View style={[styles.statBox, styles.statFemale]}>
                       <Text style={[styles.statNum, { color: '#9d174d' }]}>{female}</Text>
-                      <Text style={[styles.statLabel, { color: '#be185d' }]}>Unskilled</Text>
+                      <Text style={[styles.statLabel, { color: '#be185d' }]}>Female</Text>
                     </View>
                     <View style={[styles.statBox, styles.statTotal]}>
                       <Text style={[styles.statNum, { color: '#fff', fontSize: 22 }]}>{total}</Text>
@@ -231,18 +329,114 @@ export function LabourReportFormScreen({ route, navigation }) {
                       </Text>
                     </View>
                   )}
-                </TouchableOpacity>
+
+                  {workLines.length > 0 && (
+                    <View style={styles.workBlockWrap}>
+                      {workLines.map((line) => {
+                        const labourLine = labourNamesForWorkLine(line, labours);
+                        return (
+                          <View key={line.id} style={styles.workBlock}>
+                            <View style={styles.workBlockTopRow}>
+                              <View style={styles.workBlockLabourBlock}>
+                                <Text style={styles.labourForWorkLabel}>Labour</Text>
+                                <View style={styles.workBlockNamesRow}>
+                                  <MaterialCommunityIcons
+                                    name="account-multiple-outline"
+                                    size={14}
+                                    color={colors.mutedText}
+                                  />
+                                  <Text style={styles.labourForWorkValue} numberOfLines={3}>
+                                    {labourLine || '—'}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Pressable
+                                style={styles.workBlockEditChip}
+                                onPress={() => goPartyEdit(v, line.id)}
+                                hitSlop={6}
+                              >
+                                <MaterialCommunityIcons name="pencil-outline" size={16} color="#2563eb" />
+                              </Pressable>
+                            </View>
+                            {!!line.editReason && (
+                              <>
+                                <Text style={styles.editReasonLabel}>Reason for editing</Text>
+                                <Text style={styles.editReasonValue}>{line.editReason}</Text>
+                              </>
+                            )}
+                            <Text style={styles.workDoneLabel}>Work done</Text>
+                            <Text style={styles.workDoneValue}>{line.workDone || '—'}</Text>
+                            <Text style={styles.measureLabel}>Measurement</Text>
+                            <Text style={styles.measureValue}>{line.measurement || '—'}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
               );
             })
           )}
-
-          <GradientButton
-            title="Save Report"
-            onPress={handleSaveReport}
-            left={<MaterialCommunityIcons name="content-save" size={18} color="#fff" />}
-          />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={deleteReasonModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setDeleteReasonModal(false);
+          setDeleteTargetVendor(null);
+          setDeleteReasonInput('');
+        }}
+      >
+        <View style={styles.delSheetRoot}>
+          <TouchableWithoutFeedback
+            onPress={() => {
+              setDeleteReasonModal(false);
+              setDeleteTargetVendor(null);
+              setDeleteReasonInput('');
+            }}
+          >
+            <View style={styles.delSheetDim} />
+          </TouchableWithoutFeedback>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.delSheetKb}
+          >
+            <View style={styles.delSheetCard}>
+              <View style={styles.delSheetHandle} />
+              <Text style={styles.delSheetTitle}>Reason for deletion</Text>
+              <Text style={styles.delSheetSub}>
+                Removes saved work / measurement for{' '}
+                <Text style={styles.delSheetBold}>{deleteTargetVendor?.vendorName}</Text> on{' '}
+                {selectedDate}.
+              </Text>
+              <AppTextField
+                label="Reason"
+                value={deleteReasonInput}
+                onChangeText={setDeleteReasonInput}
+                placeholder="Enter reason for deletion"
+                multiline
+              />
+              <Pressable style={styles.delSheetDeleteBtn} onPress={confirmDeleteWithReason}>
+                <MaterialCommunityIcons name="delete-outline" size={18} color="#fff" />
+                <Text style={styles.delSheetDeleteText}>Delete</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setDeleteReasonModal(false);
+                  setDeleteTargetVendor(null);
+                  setDeleteReasonInput('');
+                }}
+                style={styles.delSheetCancelBtn}
+              >
+                <Text style={styles.delSheetCancelText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -252,7 +446,21 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 40 },
 
   h1: { color: '#1a2f4e', fontSize: 22, fontWeight: '900' },
-  sub: { marginTop: 3, color: colors.mutedText, marginBottom: 14, fontSize: 12 },
+  sub: { marginTop: 3, color: colors.mutedText, marginBottom: 8, fontSize: 12 },
+  projectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(45,127,218,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(45,127,218,0.22)',
+    marginBottom: 14,
+  },
+  projectPillText: { color: '#1d78d8', fontWeight: '800', fontSize: 12 },
 
   // control row: search + date
   controlRow: {
@@ -336,17 +544,62 @@ const styles = StyleSheet.create({
   },
   vendorIndexText: { color: '#1e3a5f', fontWeight: '900', fontSize: 13 },
   vendorName: { flex: 1, color: '#1a2f4e', fontSize: 18, fontWeight: '900' },
-  editChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eff6ff',
+  cardActionsRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 6 },
+  iconChip: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
     borderWidth: 1,
     borderColor: '#bfdbfe',
+    marginLeft: 6,
   },
-  editChipText: { color: '#2563eb', fontSize: 12, fontWeight: '700', marginLeft: 4 },
+  iconChipDanger: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+
+  delSheetRoot: { flex: 1, justifyContent: 'flex-end' },
+  delSheetDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+  },
+  delSheetKb: { width: '100%' },
+  delSheetCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  delSheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#cbd5e1',
+    marginBottom: 14,
+  },
+  delSheetTitle: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
+  delSheetSub: { fontSize: 13, color: colors.mutedText, marginTop: 6, marginBottom: 14, lineHeight: 18 },
+  delSheetBold: { fontWeight: '800', color: '#1e293b' },
+  delSheetDeleteBtn: {
+    marginTop: 8,
+    backgroundColor: '#dc2626',
+    borderRadius: 14,
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  delSheetDeleteText: { color: '#fff', fontWeight: '900', fontSize: 15, marginLeft: 8 },
+  delSheetCancelBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
+  delSheetCancelText: { color: '#64748b', fontWeight: '800', fontSize: 15 },
 
   // stats row
   statsRow: { flexDirection: 'row', marginBottom: 10 },
@@ -367,6 +620,64 @@ const styles = StyleSheet.create({
   // names row
   namesRow: { flexDirection: 'row', alignItems: 'center' },
   namesText: { flex: 1, color: colors.mutedText, fontSize: 12, marginLeft: 6 },
+
+  workBlockWrap: { marginTop: 10, gap: 8 },
+  workBlock: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 10,
+  },
+  workBlockTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  workBlockLabourBlock: { flex: 1, marginRight: 8 },
+  labourForWorkLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  workBlockNamesRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  labourForWorkValue: {
+    flex: 1,
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1e293b',
+    lineHeight: 18,
+  },
+  workBlockEditChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  editReasonLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#92400e',
+    textTransform: 'uppercase',
+  },
+  editReasonValue: {
+    fontSize: 12,
+    color: '#78350f',
+    marginTop: 2,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  workDoneLabel: { fontSize: 10, fontWeight: '800', color: '#64748b', textTransform: 'uppercase' },
+  workDoneValue: { fontSize: 13, color: '#1e293b', marginTop: 2, fontWeight: '600' },
+  measureLabel: { fontSize: 10, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginTop: 8 },
+  measureValue: { fontSize: 13, color: '#1e293b', marginTop: 2, fontWeight: '600' },
 
   // empty
   emptyWrap: { alignItems: 'center', paddingVertical: 40 },

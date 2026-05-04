@@ -1,14 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import {
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -23,22 +15,23 @@ import { getMaterialEntries, deleteMaterialEntryApi } from '../../api/materialAp
 function Row({ item, onEdit, onDelete }) {
   const itemName = item?.item?.name || 'Item #' + item.item_id;
   const vendorName = item?.vendor?.name || '—';
-  const projectName = item?.project?.name || '—';
 
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.cardBody}>
           <Text style={styles.name}>{itemName}</Text>
           <Text style={styles.metaText}>
             Vendor: <Text style={styles.bold}>{vendorName}</Text>
           </Text>
           <Text style={styles.metaText}>
-            Project: <Text style={styles.bold}>{projectName}</Text>
+            Qty: <Text style={styles.bold}>{item.qty || '—'}</Text>
+          </Text>
+          <Text style={styles.metaText}>
+            Date: <Text style={styles.bold}>{item.entry_date || '—'}</Text>
           </Text>
         </View>
 
-        {/* Action icons */}
         <View style={styles.actionsIcons}>
           <Pressable onPress={onEdit} style={{ marginRight: 14 }}>
             <MaterialCommunityIcons name="pencil-outline" size={20} color="#2563eb" />
@@ -47,17 +40,6 @@ function Row({ item, onEdit, onDelete }) {
             <MaterialCommunityIcons name="delete-outline" size={20} color="#dc2626" />
           </Pressable>
         </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.cardBottom}>
-        <Text style={styles.metaText}>
-          Qty: <Text style={styles.bold}>{item.qty || '—'}</Text>
-        </Text>
-        <Text style={styles.metaText}>
-          Date: <Text style={styles.bold}>{item.entry_date || '—'}</Text>
-        </Text>
       </View>
     </View>
   );
@@ -71,10 +53,6 @@ export function MaterialListScreen({ route, navigation }) {
 
   const [selectedDate, setSelectedDate] = useState(today);
   const [search, setSearch] = useState('');
-  const [reasonVisible, setReasonVisible] = useState(false);
-  const [actionType, setActionType] = useState(null);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [reason, setReason] = useState('');
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -82,7 +60,7 @@ export function MaterialListScreen({ route, navigation }) {
   useFocusEffect(
     React.useCallback(() => {
       fetchMaterials();
-    }, [selectedDate])
+    }, [selectedDate, projectId])
   );
 
   const fetchMaterials = async () => {
@@ -110,9 +88,11 @@ export function MaterialListScreen({ route, navigation }) {
         ? raw.data
         : [];
 
-      console.log('MATERIALS COUNT:', list.length);
-      setMaterials(list);
-
+      const scoped = list.filter(
+        (m) => String(m.project_id ?? m.project?.id ?? '') === String(projectId ?? '')
+      );
+      console.log('MATERIALS COUNT:', scoped.length);
+      setMaterials(scoped);
     } catch (err) {
       console.log('MATERIAL API ERROR:', err?.response?.data || err);
       setMaterials([]);
@@ -123,46 +103,35 @@ export function MaterialListScreen({ route, navigation }) {
   // ✅ filteredMaterials from API data (not bundle)
   const filteredMaterials = (materials || []).filter((m) => {
     if (!search.trim()) return true;
-    return String(m.item_id).toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const name = String(m?.item?.name || m.item_id || '').toLowerCase();
+    return name.includes(q) || String(m.item_id).toLowerCase().includes(q);
   });
 
   const handleEdit = (item) => {
-    setSelectedItem(item);
-    setActionType('edit');
-    setReasonVisible(true);
+    navigation.navigate('MaterialForm', {
+      projectId,
+      entryId: item.id,
+      direction: item.direction,
+    });
   };
 
   const handleDelete = (item) => {
-    setSelectedItem(item);
-    setActionType('delete');
-    setReasonVisible(true);
-  };
-
-  const handleContinue = async () => {
-    if (!reason.trim()) {
-      alert('Enter reason');
-      return;
-    }
-    setReasonVisible(false);
-
-    if (actionType === 'edit') {
-      navigation.navigate('MaterialForm', {
-        projectId,
-        entryId: selectedItem.id,
-        direction: selectedItem.direction,
-      });
-    }
-
-    if (actionType === 'delete') {
-      try {
-        await deleteMaterialEntryApi(selectedItem.id);
-        fetchMaterials();
-      } catch (err) {
-        console.log('DELETE ERROR:', err?.response?.data || err);
-      }
-    }
-
-    setReason('');
+    Alert.alert('Delete material', 'Remove this material line?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMaterialEntryApi(item.id);
+            fetchMaterials();
+          } catch (err) {
+            console.log('DELETE ERROR:', err?.response?.data || err);
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -227,36 +196,6 @@ export function MaterialListScreen({ route, navigation }) {
           }
         />
 
-        {/* Reason Modal */}
-        <Modal visible={reasonVisible} transparent animationType="slide" statusBarTranslucent>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <View style={styles.dragHandle} />
-              <Text style={styles.modalTitle}>Enter Reason</Text>
-              <TextInput
-                placeholder="Enter reason..."
-                placeholderTextColor="#9ca3af"
-                value={reason}
-                onChangeText={setReason}
-                style={styles.modalInput}
-                multiline
-                numberOfLines={4}
-              />
-              <Pressable style={styles.continueBtn} onPress={handleContinue}>
-                <Text style={styles.continueText}>Continue</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setReasonVisible(false);
-                  setReason('');
-                }}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
-
       </View>
     </ScreenContainer>
   );
@@ -309,10 +248,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  // actionsIcons — gap replaced with marginRight inline
-  actionsIcons: { flexDirection: 'row', alignItems: 'center' },
-  divider: { height: 1, backgroundColor: '#f1f5f9', marginVertical: 10 },
-  cardBottom: {},
+  cardBody: { flex: 1, paddingRight: 8 },
+  actionsIcons: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: 2 },
 
   name: { color: colors.text, fontSize: 15, fontWeight: '900', marginBottom: 4 },
   metaText: { color: '#6b7280', fontSize: 13, marginTop: 2 },
@@ -328,42 +265,4 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { marginTop: 10, color: colors.text, fontWeight: '900', fontSize: 16 },
   emptyText: { marginTop: 6, color: colors.mutedText, textAlign: 'center' },
-
-  // modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalBox: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 14, color: '#111827' },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 16,
-    padding: 16,
-    height: 110,
-    fontSize: 15,
-    textAlignVertical: 'top',
-    marginBottom: 16,
-    backgroundColor: '#f9fafb',
-  },
-  continueBtn: {
-    backgroundColor: '#2f6fed',
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  continueText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  cancelText: { textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: 15 },
 });
