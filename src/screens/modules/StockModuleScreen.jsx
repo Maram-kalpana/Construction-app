@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   Alert,
   FlatList,
@@ -8,12 +8,15 @@ import {
   Text,
   TextInput,
   View,
+  ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
+import { getStockReportList, deleteStockReport } from '../../api/stockApi';
 
 function formatListDate(selectedDate, dateKey) {
   if (!selectedDate) return dateKey();
@@ -23,18 +26,54 @@ function formatListDate(selectedDate, dateKey) {
 
 export function StockModuleScreen({ route, navigation }) {
   const { projectId } = route.params || {};
-  const { dateKey, getStockByProject, deleteStockEntry } = useApp();
+  const { dateKey } = useApp();
   const today = dateKey();
 
   const [selectedDate, setSelectedDate] = useState(today);
   const [search, setSearch] = useState('');
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const dateStr = formatListDate(selectedDate, dateKey);
 
-  const rows = useMemo(() => {
-    const all = getStockByProject(projectId) || [];
-    return all.filter((s) => String(s.date) === String(dateStr));
-  }, [getStockByProject, projectId, dateStr]);
+  const fetchStockReports = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = { date: dateStr };
+      if (projectId != null && projectId !== '') {
+        params.project_id = projectId;
+      }
+      const res = await getStockReportList(params);
+      const raw = res?.data?.data ?? res?.data ?? [];
+      const list = Array.isArray(raw) ? raw : [];
+      const mapped = list.map((s) => ({
+        id: s.id,
+        projectId: projectId,
+        date: s.date ?? dateStr,
+        itemId: s.item_id ?? s.itemId ?? null,
+        itemName: s.item_name ?? s.itemName ?? s.item?.name ?? '',
+        vendorId: s.vendor_id ?? s.vendorId ?? null,
+        vendorName: s.vendor_name ?? s.vendorName ?? s.vendor?.name ?? '',
+        openBal: s.open_bal ?? s.openBal ?? s.opening_balance ?? '',
+        received: s.received ?? s.received_qty ?? '',
+        cum: s.cum ?? s.cumulative ?? s.consumed ?? '',
+        bal: s.bal ?? s.balance ?? s.closing_balance ?? '',
+        editReason: s.edit_reason ?? s.editReason ?? '',
+      }));
+      setRows(mapped);
+    } catch (err) {
+      console.log('Stock report fetch error:', err?.response?.data || err.message);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, dateStr]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchStockReports();
+    }, [fetchStockReports]),
+  );
 
   const filteredRows = (rows || []).filter((item) => {
     if (!search.trim()) return true;
@@ -54,7 +93,16 @@ export function StockModuleScreen({ route, navigation }) {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => deleteStockEntry(item.id),
+        onPress: async () => {
+          try {
+            await deleteStockReport(item.id);
+            setRows((prev) => prev.filter((r) => r.id !== item.id));
+            Alert.alert('Deleted', 'Stock report removed.');
+          } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || 'Delete failed.';
+            Alert.alert('Error', String(msg));
+          }
+        },
       },
     ]);
   };

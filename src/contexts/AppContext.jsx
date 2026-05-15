@@ -7,8 +7,14 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { getVendorsByType } from "../api/vendorApi";
+import {
+  getVendorsByType,
+  addVendorApi,
+  updateVendorApi,
+  deleteVendorApi,
+} from "../api/vendorApi";
 import { sameScopedProject } from "../utils/labourProjectScope";
+import { useAuth } from "./AuthContext";
 
 const STORAGE_KEY = '@constructionERP/appState_v2';
 
@@ -31,6 +37,7 @@ function bundleKey(projectId, day) {
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
+  const { user, isRestoring } = useAuth();
   const [projects] = useState([
     { id: 'p-001', name: 'Green Valley Apartments', location: 'Sector 14', status: 'Active' },
   ]);
@@ -88,8 +95,13 @@ export function AppProvider({ children }) {
   const fetchVendors = async () => {
     try {
       const res = await getVendorsByType();
+      console.log("VENDOR API FULL RESPONSE:", JSON.stringify(res?.data, null, 2));
       const raw = res?.data?.data ?? res?.data ?? [];
       const data = Array.isArray(raw) ? raw : [];
+
+      if (data.length === 0) {
+        console.warn("VENDOR WARNING: API returned empty array. Check backend /manager/vendors-by-type");
+      }
 
       setVendors(
         data.map((v) => ({
@@ -99,12 +111,66 @@ export function AppProvider({ children }) {
         }))
       );
     } catch (err) {
-      console.log("Vendor error:", err);
+      console.log("VENDOR FETCH ERROR:", err?.response?.data || err?.message || err);
+      // Keep vendors as empty array on error
+      setVendors([]);
     }
   };
 
+  // Re-fetch vendors whenever auth state changes (login, restore, logout)
   useEffect(() => {
-    fetchVendors();
+    if (!isRestoring && user) {
+      fetchVendors();
+    }
+  }, [user, isRestoring]);
+
+  /* -------------------- SAVE / DELETE VENDORS -------------------- */
+
+  const saveVendor = useCallback(async (vendorData) => {
+    try {
+      const { id, name, phone, category } = vendorData;
+      if (id) {
+        // UPDATE existing vendor
+        const res = await updateVendorApi(id, { name, phone, category });
+        console.log("VENDOR UPDATE RESPONSE:", JSON.stringify(res?.data, null, 2));
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === id ? { ...v, name, phone, category, vendorType: category || v.vendorType } : v
+          )
+        );
+      } else {
+        // ADD new vendor
+        const res = await addVendorApi({ name, phone, category });
+        console.log("VENDOR ADD RESPONSE:", JSON.stringify(res?.data, null, 2));
+        const newVendor = res?.data?.data ?? res?.data;
+        if (newVendor?.id) {
+          setVendors((prev) => [
+            ...prev,
+            {
+              id: newVendor.id,
+              name: newVendor.name || name,
+              vendorType: String(newVendor.vendor_type || newVendor.type || category || '').trim(),
+            },
+          ]);
+        } else {
+          // Fallback: re-fetch all vendors
+          await fetchVendors();
+        }
+      }
+    } catch (err) {
+      console.log("VENDOR SAVE ERROR:", err?.response?.data || err?.message || err);
+      throw err;
+    }
+  }, []);
+
+  const deleteVendor = useCallback(async (id) => {
+    try {
+      await deleteVendorApi(id);
+      setVendors((prev) => prev.filter((v) => v.id !== id));
+    } catch (err) {
+      console.log("VENDOR DELETE ERROR:", err?.response?.data || err?.message || err);
+      throw err;
+    }
   }, []);
 
   /* -------------------- MATERIALS -------------------- */
@@ -249,6 +315,10 @@ const addExpense = useCallback((projectId, expense) => {
   projects,
   vendors,
 
+  // VENDORS
+  saveVendor,
+  deleteVendor,
+
   // MATERIALS
   getDailyBundle,
   addMaterialEntry,
@@ -274,6 +344,8 @@ const addExpense = useCallback((projectId, expense) => {
 }), [
   projects,
   vendors,
+  saveVendor,
+  deleteVendor,
   materials,
   ledgerData,
   stockData,

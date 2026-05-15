@@ -17,6 +17,7 @@ import { SelectField } from '../../components/SelectField';
 import { DatePickerField } from '../../components/DatePickerField';
 import { useApp } from '../../contexts/AppContext';
 import { getItems } from '../../api/itemApi';
+import { getStockReportList, addStockReport, updateStockReport, getStockReportDetails } from '../../api/stockApi';
 import { colors } from '../../theme/theme';
 
 function parseStockNum(s) {
@@ -32,7 +33,7 @@ function formatBalance(n) {
 
 export function StockFormScreen({ route, navigation }) {
   const { projectId, entryId } = route.params || {};
-  const { dateKey, projects, vendors, addStockEntry, getStockByProject } = useApp();
+  const { dateKey, projects, vendors } = useApp();
   const today = dateKey();
 
   const [date, setDate] = useState(today);
@@ -87,18 +88,23 @@ export function StockFormScreen({ route, navigation }) {
       setEditReason('');
       return;
     }
-    const list = getStockByProject(projectId);
-    const e = list.find((x) => x.id === entryId);
-    if (!e) return;
-    setDate(e.date || today);
-    setItemId(e.itemId != null ? Number(e.itemId) : null);
-    setVendorId(e.vendorId != null ? Number(e.vendorId) : null);
-    setOpenBal(String(e.openBal ?? ''));
-    setReceived(String(e.received ?? ''));
-    setCum(String(e.cum ?? ''));
-    setBal(String(e.bal ?? ''));
-    setEditReason('');
-  }, [entryId, projectId, getStockByProject, today]);
+    (async () => {
+      try {
+        const res = await getStockReportDetails(entryId);
+        const data = res?.data?.data ?? res?.data ?? {};
+        setDate(data.date || today);
+        setItemId(data.item_id ?? data.itemId ?? null);
+        setVendorId(data.vendor_id ?? data.vendorId ?? null);
+        setOpenBal(String(data.open_bal ?? data.openBal ?? data.opening_balance ?? ''));
+        setReceived(String(data.received ?? data.received_qty ?? ''));
+        setCum(String(data.cum ?? data.cumulative ?? data.consumed ?? ''));
+        setBal(String(data.bal ?? data.balance ?? data.closing_balance ?? ''));
+        setEditReason('');
+      } catch (err) {
+        console.log('Stock details fetch error:', err?.response?.data || err.message);
+      }
+    })();
+  }, [entryId, projectId, today]);
 
   useEffect(() => {
     const o = parseStockNum(openBal);
@@ -113,7 +119,9 @@ export function StockFormScreen({ route, navigation }) {
     setBal(formatBalance(o2 + r2 - c2));
   }, [openBal, received, cum]);
 
-  const onSave = () => {
+  const [saving, setSaving] = useState(false);
+
+  const onSave = async () => {
     if (!projectId) {
       Alert.alert('Error', 'Missing project');
       return;
@@ -135,23 +143,37 @@ export function StockFormScreen({ route, navigation }) {
     const vendorName =
       (vendors || []).find((v) => String(v.id) === String(vendorId))?.name || '';
 
-    addStockEntry({
-      ...(entryId ? { id: entryId } : {}),
-      projectId,
+    const payload = {
+      project_id: projectId,
       date: formattedDate,
-      itemId,
-      itemName,
-      vendorId,
-      vendorName,
-      openBal: openBal.trim(),
+      item_id: itemId,
+      item_name: itemName,
+      vendor_id: vendorId,
+      vendor_name: vendorName,
+      open_bal: openBal.trim(),
       received: received.trim(),
       cum: cum.trim(),
       bal: bal.trim(),
-      ...(isEditMode ? { editReason: editReason.trim() } : {}),
-    });
+    };
+    if (isEditMode) {
+      payload.edit_reason = editReason.trim();
+    }
 
-    Alert.alert('Success', isEditMode ? 'Stock updated' : 'Stock saved');
-    navigation.navigate('StockModule', { projectId });
+    setSaving(true);
+    try {
+      if (isEditMode) {
+        await updateStockReport(entryId, payload);
+      } else {
+        await addStockReport(payload);
+      }
+      Alert.alert('Success', isEditMode ? 'Stock updated' : 'Stock saved');
+      navigation.navigate('StockModule', { projectId });
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to save stock.';
+      Alert.alert('Error', String(msg));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

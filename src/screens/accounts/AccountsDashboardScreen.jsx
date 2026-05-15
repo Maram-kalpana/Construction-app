@@ -1,12 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { GradientCard } from '../../components/GradientCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
+import { getManagerExpenseDashboard } from '../../api/expenseApi';
 import { colors } from '../../theme/theme';
 
 function formatINR(value) {
@@ -19,21 +21,47 @@ function formatINR(value) {
 
 export function AccountsDashboardScreen({ route, navigation }) {
   const { projectId } = route.params;
-  const { getLedger, setTotalAmount, projects } = useApp();
+  const { setTotalAmount, projects } = useApp();
   const project = useMemo(
     () => projects.find((p) => String(p.id) === String(projectId)),
     [projects, projectId],
   );
 
-  const ledger = getLedger(projectId);
-  const totalExpenses = useMemo(() => ledger.expenses.reduce((sum, e) => sum + e.amount, 0), [ledger.expenses]);
-  const balance = ledger.totalAmount - totalExpenses;
+  // ── Dashboard data from API ────────────────────────────────────
+  const [dashData, setDashData] = useState(null);
+  const [dashLoading, setDashLoading] = useState(false);
 
-  const [draftTotal, setDraftTotal] = useState(String(ledger.totalAmount));
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          setDashLoading(true);
+          const res = await getManagerExpenseDashboard(projectId);
+          if (cancelled) return;
+          const data = res?.data?.data ?? res?.data ?? {};
+          setDashData(data);
+        } catch (err) {
+          console.log('Dashboard fetch error:', err?.message);
+        } finally {
+          if (!cancelled) setDashLoading(false);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [projectId])
+  );
 
-  useEffect(() => {
-    setDraftTotal(String(ledger.totalAmount ?? 0));
-  }, [projectId, ledger.totalAmount]);
+  const totalAmount = dashData?.total_amount ?? dashData?.allocated_budget ?? 0;
+  const totalExpenses = dashData?.total_expenses ?? dashData?.expenses ?? 0;
+  const balance = dashData?.balance ?? (Number(totalAmount) - Number(totalExpenses));
+
+  const [draftTotal, setDraftTotal] = useState(String(totalAmount));
+
+  useFocusEffect(
+    useCallback(() => {
+      setDraftTotal(String(totalAmount ?? 0));
+    }, [totalAmount])
+  );
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -41,13 +69,18 @@ export function AccountsDashboardScreen({ route, navigation }) {
         <Text style={styles.h1}>Accounts</Text>
         <Text style={styles.sub}>{project ? `${project.name} • ${project.location}` : `Project ${projectId}`}</Text>
 
+        {dashLoading ? (
+          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+            <ActivityIndicator size="large" color={colors.buttonStart} />
+          </View>
+        ) : (
         <View style={styles.grid}>
           <GradientCard colors={['#ffffff', '#ffffff']} style={[styles.card, styles.cardSurface]}>
             <View style={styles.cardTop}>
               <MaterialCommunityIcons name="cash-plus" size={22} color={colors.buttonStart} />
               <Text style={styles.cardLabel}>Total amount</Text>
             </View>
-            <Text style={styles.cardValue}>{formatINR(ledger.totalAmount)}</Text>
+            <Text style={styles.cardValue}>{formatINR(totalAmount)}</Text>
           </GradientCard>
 
           <GradientCard colors={['#ffffff', '#ffffff']} style={[styles.card, styles.cardSurface]}>
@@ -66,6 +99,7 @@ export function AccountsDashboardScreen({ route, navigation }) {
             <Text style={[styles.cardValue, balance < 0 && styles.cardValueWarn]}>{formatINR(balance)}</Text>
           </GradientCard>
         </View>
+        )}
 
         <View style={styles.actions}>
           <GradientButton

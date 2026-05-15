@@ -21,7 +21,7 @@ import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
-import { getLabours } from '../../api/labourApi';
+import { getLabours, addWork, updateWork } from '../../api/labourApi';
 import { getTodayAttendance } from '../../api/attendanceApi';
 import {
   labourBelongsToProject,
@@ -69,7 +69,7 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
     mode: routeMode,
     entryId: routeEntryId,
   } = route.params || {};
-  const { vendors, dateKey, addLabourWorkEntry, updateLabourWorkEntry, labourWorkEntries } =
+  const { vendors, dateKey } =
     useApp();
 
   const isEditMode = routeMode === 'edit';
@@ -85,6 +85,8 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
   const [rawLabours, setRawLabours] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [saving, setSaving] = useState(false);
 
   const [pickedForWork, setPickedForWork] = useState({});
   const [showWorkSheet, setShowWorkSheet] = useState(false);
@@ -192,34 +194,32 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
     });
   }, [navigation, displayVendorTitle, isEditMode]);
 
-  /* Pre-fill edit form from the work line being edited (entryId) or latest for party + date */
+  /* Pre-fill edit form from API work-details */
   useEffect(() => {
-    if (!isEditMode) return;
-    const all = labourWorkEntries || [];
-    const sameProj = (e) => sameScopedProject(e.projectId, routeProjectId);
-    const sameParty = (e) => String(e.vendorId) === vendorKeyStr;
-    const sameDay = (e) => e.date === selectedDate;
-    const lines = all.filter((e) => sameProj(e) && sameDay(e) && sameParty(e));
-    let target = routeEntryId
-      ? all.find((e) => e.id === routeEntryId && sameParty(e) && sameProj(e)) || null
-      : null;
-    if (!target && lines.length) target = lines[lines.length - 1];
-    if (target) {
-      setWorkDoneInput(target.workDone || '');
-      setMeasurementInput(target.measurement || '');
-      setEditReasonInput(target.editReason || '');
-      const p = {};
-      (target.labourIds || []).forEach((id) => {
-        p[String(id)] = true;
-      });
-      setPickedForWork(p);
-    } else {
-      setWorkDoneInput('');
-      setMeasurementInput('');
-      setEditReasonInput('');
-      setPickedForWork({});
-    }
-  }, [isEditMode, selectedDate, vendorKeyStr, routeEntryId, routeProjectId, labourWorkEntries]);
+    if (!isEditMode || !routeEntryId) return;
+    (async () => {
+      try {
+        const { getWorkDetails } = await import('../../api/labourApi');
+        const res = await getWorkDetails(routeEntryId);
+        const data = res?.data?.data ?? res?.data ?? {};
+        setWorkDoneInput(data.work_done ?? data.workDone ?? '');
+        setMeasurementInput(data.measurement ?? data.measure ?? '');
+        setEditReasonInput(data.edit_reason ?? data.editReason ?? '');
+        const ids = data.labour_ids ?? data.labourIds ?? [];
+        const p = {};
+        (Array.isArray(ids) ? ids : []).forEach((id) => {
+          p[String(id)] = true;
+        });
+        setPickedForWork(p);
+      } catch (err) {
+        console.log('Work details fetch error:', err?.response?.data || err.message);
+        setWorkDoneInput('');
+        setMeasurementInput('');
+        setEditReasonInput('');
+        setPickedForWork({});
+      }
+    })();
+  }, [isEditMode, routeEntryId]);
 
   const togglePickForWork = (labourId) => {
     const key = String(labourId);
@@ -237,36 +237,34 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
     setShowWorkSheet(true);
   };
 
-  const saveWorkEntries = () => {
+  const saveWorkEntries = async () => {
     const selected = partyLabours.filter((l) => pickedForWork[String(l.id)]);
     if (!selected.length) return;
 
-    const groups = {};
-    selected.forEach((L) => {
-      const key =
-        L.vendorId != null && L.vendorId !== '' ? String(L.vendorId) : 'no_vendor';
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(L.id);
-    });
-
     const workDone = workDoneInput.trim();
     const measurement = measurementInput.trim();
+    const labourIds = selected.map((l) => Number(l.id));
+    const names = selected.map((l) => l.name).filter(Boolean);
 
-    Object.entries(groups).forEach(([vendorKey, labourIds]) => {
-      const names = labourIds
-        .map((id) => selected.find((s) => String(s.id) === String(id))?.name)
-        .filter(Boolean);
-      addLabourWorkEntry({
-        projectId: routeProjectId,
-        date: selectedDate,
-        vendorId: vendorKey === 'no_vendor' ? 'no_vendor' : vendorKey,
-        workDone,
+    setSaving(true);
+    try {
+      await addWork({
+        project_id: routeProjectId,
+        date: typeof selectedDate === 'string' ? selectedDate : new Date(selectedDate).toISOString().split('T')[0],
+        vendor_id: vendorKeyStr === 'no_vendor' ? null : vendorKeyStr,
+        work_done: workDone,
         measurement,
-        labourIds,
-        labourNames: names.join(', '),
+        labour_ids: labourIds,
+        labour_names: names.join(', '),
       });
-    });
-
+      Alert.alert('Success', 'Work entry saved.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to save work entry.';
+      Alert.alert('Error', String(msg));
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
     setPickedForWork({});
     setShowWorkSheet(false);
     setWorkDoneInput('');
@@ -274,7 +272,7 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
     navigation.goBack();
   };
 
-  const saveEditMaterialForm = () => {
+  const saveEditMaterialForm = async () => {
     if (!editReasonInput.trim()) {
       Alert.alert('Required', 'Please enter a reason for editing.');
       return;
@@ -294,32 +292,33 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
       })
       .filter(Boolean);
     const labourNames = names.join(', ');
-    const patch = {
-      projectId: routeProjectId,
-      date: selectedDate,
-      vendorId: vendorKeyStr === 'no_vendor' ? 'no_vendor' : vendorKeyStr,
-      workDone: workDoneInput.trim(),
+
+    const payload = {
+      project_id: routeProjectId,
+      date: typeof selectedDate === 'string' ? selectedDate : new Date(selectedDate).toISOString().split('T')[0],
+      vendor_id: vendorKeyStr === 'no_vendor' ? null : vendorKeyStr,
+      work_done: workDoneInput.trim(),
       measurement: measurementInput.trim(),
-      labourIds,
-      labourNames,
-      editReason: editReasonInput.trim(),
+      labour_ids: labourIds,
+      labour_names: labourNames,
+      edit_reason: editReasonInput.trim(),
     };
-    const all = labourWorkEntries || [];
-    const sameProj = (e) => sameScopedProject(e.projectId, routeProjectId);
-    const sameParty = (e) => String(e.vendorId) === vendorKeyStr;
-    const sameDay = (e) => e.date === selectedDate;
-    const dayLines = all.filter((e) => sameProj(e) && sameDay(e) && sameParty(e));
-    const idToUpdate =
-      routeEntryId && all.some((e) => e.id === routeEntryId && sameParty(e) && sameProj(e))
-        ? routeEntryId
-        : dayLines.length
-          ? dayLines[dayLines.length - 1].id
-          : null;
-    if (idToUpdate) {
-      updateLabourWorkEntry(idToUpdate, patch);
-    } else {
-      addLabourWorkEntry({ ...patch });
+
+    setSaving(true);
+    try {
+      if (routeEntryId) {
+        await updateWork(routeEntryId, payload);
+      } else {
+        await addWork(payload);
+      }
+      Alert.alert('Success', 'Work entry updated.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to save.';
+      Alert.alert('Error', String(msg));
+      setSaving(false);
+      return;
     }
+    setSaving(false);
     navigation.goBack();
   };
 

@@ -24,3 +24,25 @@ export const updateLabour = (id, data) => {
 export const deleteLabour = (id) => {
   return api.delete(`/manager/labours/delete/${id}`);
 };
+
+// ─── WORK ENTRIES ────────────────────────────────────────────────
+
+// ADD WORK
+export const addWork = (data) => {
+  return api.post("/manager/labours/add-work", data);
+};
+
+// UPDATE WORK (by work_group_id)
+export const updateWork = (workGroupId, data) => {
+  return api.put(`/manager/labours/update-work/${workGroupId}`, data);
+};
+
+// WORK LIST (optional ?date= query)
+export const getWorkList = (params) => {
+  return api.get("/manager/labours/work-list", { params: params || undefined });
+};
+
+// WORK DETAILS
+export const getWorkDetails = (id) => {
+  return api.get(`/manager/labours/work-details/${id}`);
+};

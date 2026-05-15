@@ -16,15 +16,18 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppTextField } from '../../components/AppTextField';
-import { changePassword } from '../../api/authApi';
+import { changePassword, getProfile, updateProfileImage } from '../../api/authApi';
 
 export function ProfileScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const insets = useSafeAreaInsets();
   const [photoUri, setPhotoUri] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -38,6 +41,40 @@ export function ProfileScreen({ navigation }) {
     setConfirmPassword('');
     setPasswordSubmitting(false);
   }, []);
+
+  // ✅ Fetch profile from API on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          setProfileLoading(true);
+          const res = await getProfile();
+          if (cancelled) return;
+          const data = res?.data?.data ?? res?.data ?? {};
+          if (data?.name || data?.email) {
+            updateUser({
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              role: data.role,
+              username: data.username ?? data.id,
+              photo: data.photo ?? data.profile_photo ?? null,
+            });
+            if (data.photo || data.profile_photo) {
+              setPhotoUri(data.photo ?? data.profile_photo);
+            }
+          }
+        } catch (err) {
+          // Silently fail – user data from login is already available
+          console.log('Profile fetch error:', err?.message);
+        } finally {
+          if (!cancelled) setProfileLoading(false);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [updateUser])
+  );
 
   const submitPasswordChange = useCallback(async () => {
     if (!oldPassword.trim()) {
@@ -96,7 +133,31 @@ export function ProfileScreen({ navigation }) {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setPhotoUri(uri);
+      // Upload to server
+      try {
+        setUploadingPhoto(true);
+        const formData = new FormData();
+        const filename = uri.split('/').pop() || 'profile.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        formData.append('image', { uri, name: filename, type });
+        const res = await updateProfileImage(formData);
+        const photoUrl = res?.data?.data?.photo ?? res?.data?.photo ?? res?.data?.image ?? null;
+        if (photoUrl) {
+          updateUser({ photo: photoUrl });
+        }
+        Alert.alert('Success', 'Profile photo updated.');
+      } catch (err) {
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          'Failed to upload photo.';
+        Alert.alert('Error', String(msg));
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   };
 
@@ -136,9 +197,15 @@ export function ProfileScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={styles.avatarArea}>
-            <TouchableOpacity style={styles.avatarWrap} onPress={pickPhoto} activeOpacity={0.85}>
-              {photoUri ? (
+            <TouchableOpacity style={styles.avatarWrap} onPress={pickPhoto} activeOpacity={0.85} disabled={uploadingPhoto}>
+              {uploadingPhoto ? (
+                <ActivityIndicator size="large" color="#fff" style={{ flex: 1 }} />
+              ) : photoUri ? (
                 <Image source={{ uri: photoUri }} style={styles.avatarImg} />
+              ) : user?.photo ? (
+                <Image source={{ uri: user.photo }} style={styles.avatarImg} />
+              ) : profileLoading ? (
+                <ActivityIndicator size="large" color="#fff" style={{ flex: 1 }} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <MaterialCommunityIcons name="account-hard-hat" size={40} color="#4A90E2" />

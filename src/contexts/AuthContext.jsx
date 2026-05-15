@@ -81,14 +81,22 @@ export function AuthProvider({ children }) {
     await AsyncStorage.removeItem(TOKEN_KEY);
   }, []);
 
+  // ✅ UPDATE USER (used by ProfileScreen after fetching profile / uploading photo)
+  const updateUser = useCallback(async (partial) => {
+    const next = { ...(user ?? {}), ...partial };
+    setUser(next);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }, [user]);
+
   const value = useMemo(
     () => ({
       user,
       isRestoring,
       login,
       logout,
+      updateUser,
     }),
-    [user, isRestoring, login, logout]
+    [user, isRestoring, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

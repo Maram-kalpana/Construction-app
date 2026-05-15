@@ -21,7 +21,7 @@ import { DatePickerField } from '../../components/DatePickerField';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
-import { getLabours } from '../../api/labourApi';
+import { getLabours, getWorkList } from '../../api/labourApi';
 import { getTodayAttendance } from '../../api/attendanceApi';
 import {
   labourBelongsToProject,
@@ -45,7 +45,7 @@ function labourNamesForWorkLine(line, laboursList) {
 
 export function LabourReportFormScreen({ route, navigation }) {
   const { projectId } = route.params || {};
-  const { vendors, projects, dateKey, labourWorkEntries, removeLabourWorkEntriesForVendorDate } =
+  const { vendors, projects, dateKey } =
     useApp();
   const projectTitle =
     (projects || []).find((p) => String(p.id) === String(projectId))?.name || 'Project';
@@ -54,6 +54,8 @@ export function LabourReportFormScreen({ route, navigation }) {
   const [search, setSearch] = useState('');
   const [labours, setLabours] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [workEntries, setWorkEntries] = useState([]);
+  const [fetchLoading, setFetchLoading] = useState(false);
 
   const [deleteReasonModal, setDeleteReasonModal] = useState(false);
   const [deleteTargetVendor, setDeleteTargetVendor] = useState(null);
@@ -61,19 +63,23 @@ export function LabourReportFormScreen({ route, navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
+      setFetchLoading(true);
       const dateStr =
         typeof selectedDate === 'string'
           ? selectedDate
           : new Date(selectedDate).toISOString().split('T')[0];
       const q = projectId != null && projectId !== '' ? { project_id: projectId } : undefined;
-      const labourRes = await getLabours(q);
+      const [labourRes, attRes, workRes] = await Promise.all([
+        getLabours(q),
+        getTodayAttendance({ date: dateStr, ...(q || {}) }),
+        getWorkList({ date: dateStr, ...(q || {}) }).catch(() => null),
+      ]);
       const rawList = labourRes?.data?.data ?? labourRes?.data ?? [];
       const rawLabours = Array.isArray(rawList) ? rawList : [];
       const laboursData = rawLabours
         .map((item) => labourRowWithInferredProject(item, projectId))
         .filter((item) => labourBelongsToProject(item, projectId));
-      const attendanceRes = await getTodayAttendance({ date: dateStr, ...(q || {}) });
-      const attList = attendanceRes?.data?.data ?? attendanceRes?.data ?? [];
+      const attList = attRes?.data?.data ?? attRes?.data ?? [];
       const attendanceData = Array.isArray(attList) ? attList : [];
       const allowedIds = new Set(laboursData.map((l) => Number(l.id)));
       const attendanceScoped = attendanceData.filter(
@@ -82,10 +88,45 @@ export function LabourReportFormScreen({ route, navigation }) {
       );
       setLabours(laboursData);
       setAttendance(attendanceScoped);
+
+      // Parse work entries from API response
+      const workRaw = workRes?.data?.data ?? workRes?.data ?? [];
+      const workList = Array.isArray(workRaw) ? workRaw : [];
+      const mapped = workList.map((w) => {
+        const vendorFromApi = w?.vendor || {};
+        const vid =
+          w?.vendor_id ??
+          vendorFromApi?.id ??
+          null;
+        const vName =
+          w?.vendor_name ??
+          vendorFromApi?.name ??
+          '';
+        const labourIds = w?.labour_ids
+          ? (Array.isArray(w.labour_ids) ? w.labour_ids : [])
+          : (w?.labourIds || []);
+        const labourNames = w?.labour_names || w?.labourNames || '';
+        return {
+          id: w.id,
+          projectId: projectId,
+          date: dateStr,
+          vendorId: vid != null && vid !== '' ? String(vid) : 'no_vendor',
+          vendorName: vName ? String(vName) : '',
+          workDone: w.work_done ?? w.workDone ?? '',
+          measurement: w.measurement ?? w.measure ?? '',
+          labourIds,
+          labourNames: Array.isArray(labourNames) ? labourNames.join(', ') : String(labourNames),
+          editReason: w.edit_reason ?? w.editReason ?? '',
+        };
+      });
+      setWorkEntries(mapped);
     } catch (err) {
       console.log('Report fetch error:', err.response?.data || err.message);
       setLabours([]);
       setAttendance([]);
+      setWorkEntries([]);
+    } finally {
+      setFetchLoading(false);
     }
   }, [selectedDate, projectId]);
 
@@ -133,7 +174,7 @@ export function LabourReportFormScreen({ route, navigation }) {
   const totalPresent = vendorsWithRows.reduce((sum, v) => sum + v.persons.length, 0);
 
   const workLinesForVendor = (vendorId) =>
-    (labourWorkEntries || []).filter(
+    (workEntries || []).filter(
       (e) =>
         sameScopedProject(e.projectId, projectId) &&
         e.date === selectedDate &&
@@ -173,7 +214,13 @@ export function LabourReportFormScreen({ route, navigation }) {
       return;
     }
     if (!deleteTargetVendor) return;
-    removeLabourWorkEntriesForVendorDate(selectedDate, deleteTargetVendor.id, projectId);
+    // Remove work entries from local state for this vendor + date
+    setWorkEntries((prev) =>
+      prev.filter(
+        (e) =>
+          !(e.date === selectedDate && String(e.vendorId) === String(deleteTargetVendor.id)),
+      ),
+    );
     setDeleteReasonModal(false);
     setDeleteTargetVendor(null);
     setDeleteReasonInput('');

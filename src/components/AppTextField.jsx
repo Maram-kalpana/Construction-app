@@ -29,12 +29,12 @@ export function AppTextField({
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        multiline={multiline}
+        multiline={!!multiline}
         numberOfLines={numberOfLines}
-        secureTextEntry={secureTextEntry}
+        secureTextEntry={!!secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
-        editable={editable}
+        editable={editable !== false}
         placeholder={placeholder}
         placeholderTextColor={placeholderColor || 'rgba(35,63,95,0.38)'}
         onBlur={onBlur}
