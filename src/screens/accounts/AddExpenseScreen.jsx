@@ -1,8 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SegmentedButtons } from 'react-native-paper';
 
+import { addManagerExpense } from '../../api/expenseApi';
 import { AppTextField } from '../../components/AppTextField';
 import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -10,6 +19,7 @@ import { SelectField } from '../../components/SelectField';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/theme';
+import { formatDateOnlyLocal } from '../../utils/dateOnly';
 
 function vendorsMatchingType(vendors, expenseType) {
   const hay = (v) =>
@@ -40,6 +50,22 @@ function vendorsMatchingType(vendors, expenseType) {
   return (vendors || []).filter((v) => keys.some((k) => hay(v).includes(k)));
 }
 
+function formatApiError(err) {
+  const d = err?.response?.data;
+  if (typeof d?.message === 'string') return d.message;
+  if (d?.errors && typeof d.errors === 'object') {
+    const parts = [];
+    for (const [k, v] of Object.entries(d.errors)) {
+      const msgs = Array.isArray(v) ? v : [v];
+      msgs.forEach((m) => {
+        if (m != null && String(m).trim()) parts.push(`${k}: ${String(m).trim()}`);
+      });
+    }
+    if (parts.length) return parts.join('\n');
+  }
+  return err?.message || 'Request failed';
+}
+
 export function AddExpenseScreen({ route, navigation }) {
   const { projectId } = route.params;
   const { user } = useAuth();
@@ -52,6 +78,7 @@ export function AddExpenseScreen({ route, navigation }) {
   const [expenseType, setExpenseType] = useState('Labour');
   const [partyId, setPartyId] = useState(null);
   const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const partyList = useMemo(
     () => vendorsMatchingType(vendors, expenseType),
@@ -81,8 +108,12 @@ export function AddExpenseScreen({ route, navigation }) {
   const selectedName = partyList.find((v) => v.id === partyId)?.name || '';
 
   const disabled = useMemo(
-    () => partyId == null || Number(amount) <= 0 || !Number.isFinite(Number(amount)),
-    [partyId, amount],
+    () =>
+      saving ||
+      partyId == null ||
+      Number(amount) <= 0 ||
+      !Number.isFinite(Number(amount)),
+    [saving, partyId, amount],
   );
 
   const dateLabel = useMemo(() => new Date().toLocaleString(), []);
@@ -141,19 +172,48 @@ export function AddExpenseScreen({ route, navigation }) {
             />
 
             <GradientButton
-              title="Save expense"
+              title={saving ? 'Saving…' : 'Save expense'}
               disabled={disabled}
               onPress={async () => {
                 if (!user) return;
-                const exp = await addExpense(projectId, {
-                  managerId: user.id,
-                  name: selectedName,
-                  partyId,
-                  type: expenseType,
-                  amount: Number(amount),
-                  dateIso: new Date().toISOString(),
-                });
-                navigation.replace('ExpenseDetails', { projectId, expense: exp });
+                setSaving(true);
+                const amt = Number(amount);
+                const expenseDate = formatDateOnlyLocal(new Date());
+                const pid = Number(projectId);
+                const payload = {
+                  project_id: Number.isFinite(pid) ? pid : projectId,
+                  vendor_id: Number(partyId),
+                  amount: amt,
+                  expense_date: expenseDate,
+                  description: `${expenseType}: ${selectedName}`.trim(),
+                  expense_type: expenseType,
+                };
+                try {
+                  const res = await addManagerExpense(payload);
+                  const created = res?.data?.data ?? res?.data ?? {};
+                  const id = created.id ?? created.expense_id;
+                  const dateStr = created.expense_date ?? created.date ?? expenseDate;
+                  const dateIso =
+                    typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)
+                      ? `${dateStr.slice(0, 10)}T12:00:00.000Z`
+                      : new Date(created.created_at || Date.now()).toISOString();
+                  const exp = {
+                    id: id ?? `exp_${Date.now()}`,
+                    managerId: user.id,
+                    name: selectedName,
+                    partyId,
+                    type: created.expense_type ?? created.category ?? expenseType,
+                    amount: Number(created.amount ?? amt),
+                    dateIso,
+                  };
+                  addExpense(projectId, exp);
+                  navigation.replace('ExpenseDetails', { projectId, expense: exp });
+                } catch (err) {
+                  console.log('[AddExpense] API error:', err?.response?.data || err?.message);
+                  Alert.alert('Could not save expense', formatApiError(err));
+                } finally {
+                  setSaving(false);
+                }
               }}
             />
           </View>

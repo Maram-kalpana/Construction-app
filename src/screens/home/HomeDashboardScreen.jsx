@@ -71,17 +71,32 @@ export default function HomeDashboardScreen({ navigation }) {
       const projectList = pRes?.data?.data || [];
       setProjects(projectList);
 
-      // Use first project for dashboard summary (or aggregate all)
-      if (projectList.length > 0) {
-        const firstId = projectList[0].id;
-        const dRes = await getProjectDashboard(firstId);
-        console.log('DASHBOARD API:', JSON.stringify(dRes?.data, null, 2));
-        if (dRes?.data?.success) {
-          setDashboardData(dRes.data.data);
+      if (!projectList.length) {
+        setDashboardData(null);
+        return;
+      }
+
+      // Try each assigned project until dashboard returns success (first may be unauthorized for this route).
+      let dash = null;
+      for (const p of projectList) {
+        const pid = p?.id;
+        if (pid == null) continue;
+        try {
+          const dRes = await getProjectDashboard(pid);
+          if (dRes?.data?.success && dRes.data.data) {
+            dash = dRes.data.data;
+            break;
+          }
+        } catch (e) {
+          console.log('DASHBOARD skip project', pid, e?.response?.data || e?.message);
         }
       }
+      setDashboardData(dash);
+      if (!dash) {
+        console.log('DASHBOARD: no project returned a successful summary.');
+      }
     } catch (err) {
-      console.log('DASHBOARD FETCH ERROR:', err?.response?.data || err);
+      console.log('PROJECTS LIST ERROR:', err?.response?.data || err);
     } finally {
       setLoadingDash(false);
     }

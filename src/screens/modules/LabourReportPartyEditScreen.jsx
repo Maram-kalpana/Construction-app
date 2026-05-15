@@ -21,7 +21,7 @@ import { GradientButton } from '../../components/GradientButton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useApp } from '../../contexts/AppContext';
 import { colors } from '../../theme/theme';
-import { getLabours, addWork, updateWork } from '../../api/labourApi';
+import { getLabours, addWork, updateWork, getWorkDetails } from '../../api/labourApi';
 import { getTodayAttendance } from '../../api/attendanceApi';
 import {
   labourBelongsToProject,
@@ -29,6 +29,7 @@ import {
   attendanceBelongsToProject,
   sameScopedProject,
 } from '../../utils/labourProjectScope';
+import { toDateOnlyLocal } from '../../utils/dateOnly';
 
 function labourVendorFromApi(item) {
   const nested = item?.vendor;
@@ -96,10 +97,7 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const dateStr =
-        typeof selectedDate === 'string'
-          ? selectedDate
-          : new Date(selectedDate).toISOString().split('T')[0];
+      const dateStr = toDateOnlyLocal(selectedDate);
       const q =
         routeProjectId != null && routeProjectId !== '' ? { project_id: routeProjectId } : {};
       const [labourRes, attendanceRes] = await Promise.all([
@@ -199,7 +197,6 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
     if (!isEditMode || !routeEntryId) return;
     (async () => {
       try {
-        const { getWorkDetails } = await import('../../api/labourApi');
         const res = await getWorkDetails(routeEntryId);
         const data = res?.data?.data ?? res?.data ?? {};
         setWorkDoneInput(data.work_done ?? data.workDone ?? '');
@@ -250,7 +247,7 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
     try {
       await addWork({
         project_id: routeProjectId,
-        date: typeof selectedDate === 'string' ? selectedDate : new Date(selectedDate).toISOString().split('T')[0],
+        date: toDateOnlyLocal(selectedDate),
         vendor_id: vendorKeyStr === 'no_vendor' ? null : vendorKeyStr,
         work_done: workDone,
         measurement,
@@ -295,7 +292,7 @@ export function LabourReportPartyEditScreen({ route, navigation }) {
 
     const payload = {
       project_id: routeProjectId,
-      date: typeof selectedDate === 'string' ? selectedDate : new Date(selectedDate).toISOString().split('T')[0],
+      date: toDateOnlyLocal(selectedDate),
       vendor_id: vendorKeyStr === 'no_vendor' ? null : vendorKeyStr,
       work_done: workDoneInput.trim(),
       measurement: measurementInput.trim(),

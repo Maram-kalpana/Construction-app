@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useMemo, useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   FlatList,
   Image,
@@ -16,6 +16,7 @@ import {
   View,
   Alert,
 } from 'react-native';
+import { SegmentedButtons } from 'react-native-paper';
 
 import { AppTextField } from '../../components/AppTextField';
 import { DatePickerField } from '../../components/DatePickerField';
@@ -30,6 +31,7 @@ import {
   labourProjectIdFromRow,
   attendanceBelongsToProject,
 } from '../../utils/labourProjectScope';
+import { toDateOnlyLocal } from '../../utils/dateOnly';
 
 /** Vendor id/name from labour list API (flat vendor_id vs nested vendor object). */
 function labourVendorFromApi(item) {
@@ -46,16 +48,6 @@ function labourVendorFromApi(item) {
     vendorId: id != null && id !== '' ? id : null,
     vendorName: nameFromApi ? String(nameFromApi) : null,
   };
-}
-
-function toDateOnlyStr(d) {
-  if (d == null || d === '') return '';
-  if (typeof d === 'string') return d.slice(0, 10);
-  try {
-    return new Date(d).toISOString().slice(0, 10);
-  } catch {
-    return '';
-  }
 }
 
 /** Laravel-style validation payload → single message for inline display. */
@@ -78,6 +70,7 @@ function formatLabourApiErrors(payload) {
 
 export function LabourListScreen({ route }) {
   const { projectId, vendorId: filterVendorId, date: routeDate } = route.params || {};
+  const navigation = useNavigation();
   const { vendors, dateKey, projects: appProjects } = useApp();
 
   const today = dateKey();
@@ -104,19 +97,22 @@ export function LabourListScreen({ route }) {
   const [actionType, setActionType] = useState(null);
   const [actionLabour, setActionLabour] = useState(null);
   const [formError, setFormError] = useState('');
+  /** Aligns with API: GET /manager/labours/list?attendance=present|absent */
+  const [attendanceListFilter, setAttendanceListFilter] = useState('all');
+  const skipFirstNavFocusRef = useRef(true);
   const projectTitle =
     (appProjects || []).find((p) => String(p.id) === String(projectId))?.name || 'Project';
 
-  const loadLaboursAndAttendance = async () => {
+  const loadLaboursAndAttendance = useCallback(async () => {
     try {
       setLoading(true);
-      const dateStr =
-        typeof selectedDate === 'string'
-          ? selectedDate
-          : new Date(selectedDate).toISOString().split('T')[0];
+      const dateStr = toDateOnlyLocal(selectedDate);
       const params = {
         ...(projectId != null && projectId !== '' ? { project_id: projectId } : {}),
         date: dateStr,
+        ...(attendanceListFilter === 'present' || attendanceListFilter === 'absent'
+          ? { attendance: attendanceListFilter }
+          : {}),
       };
       console.log('[LabourListScreen] fetch params:', JSON.stringify(params));
       const labourRes = await getLabours(params);
@@ -161,7 +157,7 @@ export function LabourListScreen({ route }) {
       attData.forEach((item) => {
         if (!attendanceBelongsToProject(item, projectId)) return;
         if (!allowedIds.has(Number(item.labour_id))) return;
-        map[item.labour_id] = item.is_present == 1;
+        map[item.labour_id] = item.is_present == 1 || item.is_present === true;
       });
       setAttendanceMap(map);
     } catch (err) {
@@ -171,13 +167,24 @@ export function LabourListScreen({ route }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, projectId, attendanceListFilter]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadLaboursAndAttendance();
-    }, [selectedDate, projectId])
-  );
+  // Refetch when date / project / filter change (useFocusEffect alone often misses in-place date changes).
+  useEffect(() => {
+    void loadLaboursAndAttendance();
+  }, [loadLaboursAndAttendance]);
+
+  // Refetch when returning from another screen (e.g. Labour form) with same date still selected.
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      if (skipFirstNavFocusRef.current) {
+        skipFirstNavFocusRef.current = false;
+        return;
+      }
+      void loadLaboursAndAttendance();
+    });
+    return unsub;
+  }, [navigation, loadLaboursAndAttendance]);
 
   const filtered = useMemo(() => {
     const vendorIdMatch = (p) =>
@@ -235,7 +242,7 @@ export function LabourListScreen({ route }) {
     setPhone(item.phone || '');
     setDailyWage(item.dailyWage != null && item.dailyWage !== '' ? String(item.dailyWage) : '');
     setEffectiveFrom(
-      toDateOnlyStr(item.effectiveFrom) || toDateOnlyStr(selectedDate) || today,
+      toDateOnlyLocal(item.effectiveFrom) || toDateOnlyLocal(selectedDate) || today,
     );
     setGender(item.gender || 'male');
     setVendorId(Number(item.vendorId) || null);
@@ -309,15 +316,33 @@ export function LabourListScreen({ route }) {
             onPress={async () => {
               try {
                 const newStatus = !attendanceMap[item.id];
+                const dateStr = toDateOnlyLocal(selectedDate);
+                const projectPayload =
+                  projectId != null && projectId !== ''
+                    ? {
+                        project_id: Number.isFinite(Number(projectId))
+                          ? Number(projectId)
+                          : projectId,
+                      }
+                    : {};
                 await markAttendance({
-                  labour_ids: [item.id],
-                  date: selectedDate,
-                  is_present: newStatus ? 1 : 0,
-                  ...(projectId != null && projectId !== '' ? { project_id: projectId } : {}),
+                  labour_ids: [Number(item.id)],
+                  date: dateStr,
+                  // Prefer boolean (Laravel `boolean` rule); `present_flag` helps APIs that read 0/1 only
+                  is_present: newStatus,
+                  present_flag: newStatus ? 1 : 0,
+                  ...projectPayload,
                 });
                 setAttendanceMap((prev) => ({ ...prev, [item.id]: newStatus }));
               } catch (err) {
                 console.log('Attendance error:', err.response?.data || err.message);
+                const payload = err?.response?.data;
+                const msg =
+                  formatLabourApiErrors(payload) ||
+                  (typeof payload?.message === 'string' ? payload.message : '') ||
+                  err?.message ||
+                  'Could not update attendance.';
+                Alert.alert('Attendance not saved', msg);
               }
             }}
           >
@@ -393,6 +418,29 @@ export function LabourListScreen({ route }) {
                 </View>
               </View>
 
+              <View style={styles.attendanceFilterWrap}>
+                <Text style={styles.label}>List filter</Text>
+                <SegmentedButtons
+                  value={attendanceListFilter}
+                  onValueChange={setAttendanceListFilter}
+                  buttons={[
+                    { value: 'all', label: 'All' },
+                    { value: 'present', label: 'Present' },
+                    { value: 'absent', label: 'Absent' },
+                  ]}
+                  theme={{
+                    colors: {
+                      secondaryContainer: 'rgba(125,211,252,0.22)',
+                      onSecondaryContainer: colors.text,
+                      outline: colors.outline,
+                    },
+                  }}
+                />
+                <Text style={styles.filterHint}>
+                  Uses list API with attendance=present or absent for the selected date.
+                </Text>
+              </View>
+
               {/* PRESENT BADGE + ADD BUTTON */}
               <View style={styles.actionContainer}>
                 <View style={styles.fakeLabel} />
@@ -407,7 +455,7 @@ export function LabourListScreen({ route }) {
                     style={styles.addBtn}
                     onPress={() => {
                       setFormError('');
-                      setEffectiveFrom(toDateOnlyStr(selectedDate) || today);
+                      setEffectiveFrom(toDateOnlyLocal(selectedDate) || today);
                       setShowAddModal(true);
                     }}
                   >
@@ -582,7 +630,7 @@ export function LabourListScreen({ route }) {
                   setFormError('Enter a valid daily wage (0 or more).');
                   return;
                 }
-                const eff = toDateOnlyStr(effectiveFrom);
+                const eff = toDateOnlyLocal(effectiveFrom);
                 if (!eff) {
                   setFormError('Select the wage effective from date.');
                   return;
@@ -863,6 +911,16 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   searchContainer: { flex: 1 },
+  attendanceFilterWrap: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  filterHint: {
+    marginTop: 8,
+    fontSize: 11,
+    color: colors.mutedText,
+    lineHeight: 15,
+  },
   label: { fontSize: 12, color: colors.mutedText, marginBottom: 6 },
   searchWrap: {
     flexDirection: 'row',

@@ -3,10 +3,13 @@ import React, { useState } from 'react';
 import { Pressable, Text, View, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+import { formatDateOnlyLocal, parseDateLocalYmd } from '../utils/dateOnly';
+
 export function DatePickerField({ label = 'Date', value, onChange, style }) {
   const [show, setShow] = useState(false);
 
-  const selectedDate = value ? new Date(value) : new Date();
+  const selectedDate = value ? parseDateLocalYmd(value) : new Date();
+  const displayYmd = value ? formatDateOnlyLocal(parseDateLocalYmd(value)) : '';
 
   return (
     <View style={style}>
@@ -26,11 +29,7 @@ export function DatePickerField({ label = 'Date', value, onChange, style }) {
           justifyContent: 'space-between',
         }}
       >
-        <Text>
-  {value
-    ? new Date(value).toISOString().split('T')[0]
-    : 'Select date'}
-</Text>
+        <Text>{value ? displayYmd : 'Select date'}</Text>
 
         <MaterialCommunityIcons name="calendar" size={20} color="#2563eb" />
       </Pressable>
@@ -42,10 +41,13 @@ export function DatePickerField({ label = 'Date', value, onChange, style }) {
           mode="date"
           display={Platform.OS === 'ios' ? 'inline' : 'default'}
           onChange={(event, date) => {
+            if (Platform.OS === 'android' && event?.type === 'dismissed') {
+              setShow(false);
+              return;
+            }
             setShow(false);
             if (date) {
-              const formatted = date.toISOString().split('T')[0];
-              onChange(formatted);
+              onChange(formatDateOnlyLocal(date));
             }
           }}
         />

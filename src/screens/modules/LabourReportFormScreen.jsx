@@ -29,6 +29,7 @@ import {
   attendanceBelongsToProject,
   sameScopedProject,
 } from '../../utils/labourProjectScope';
+import { toDateOnlyLocal } from '../../utils/dateOnly';
 
 function labourNamesForWorkLine(line, laboursList) {
   if (line?.labourNames && String(line.labourNames).trim()) return String(line.labourNames).trim();
@@ -64,10 +65,7 @@ export function LabourReportFormScreen({ route, navigation }) {
   const fetchData = useCallback(async () => {
     try {
       setFetchLoading(true);
-      const dateStr =
-        typeof selectedDate === 'string'
-          ? selectedDate
-          : new Date(selectedDate).toISOString().split('T')[0];
+      const dateStr = toDateOnlyLocal(selectedDate);
       const q = projectId != null && projectId !== '' ? { project_id: projectId } : {};
       const [labourRes, attRes, workRes] = await Promise.all([
         getLabours({ ...q, date: dateStr }),
@@ -106,8 +104,9 @@ export function LabourReportFormScreen({ route, navigation }) {
           ? (Array.isArray(w.labour_ids) ? w.labour_ids : [])
           : (w?.labourIds || []);
         const labourNames = w?.labour_names || w?.labourNames || '';
+        const workGroupId = w.work_group_id ?? w.work_group_uuid ?? w.group_id ?? w.id;
         return {
-          id: w.id,
+          id: workGroupId,
           projectId: projectId,
           date: dateStr,
           vendorId: vid != null && vid !== '' ? String(vid) : 'no_vendor',

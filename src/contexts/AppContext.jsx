@@ -13,6 +13,7 @@ import {
   updateVendorApi,
   deleteVendorApi,
 } from "../api/vendorApi";
+import { formatDateOnlyLocal } from "../utils/dateOnly";
 import { sameScopedProject } from "../utils/labourProjectScope";
 import { useAuth } from "./AuthContext";
 
@@ -25,7 +26,7 @@ function makeId(prefix) {
 }
 
 function dateKey(d = new Date()) {
-  return d.toISOString().slice(0, 10);
+  return formatDateOnlyLocal(d);
 }
 
 function bundleKey(projectId, day) {
